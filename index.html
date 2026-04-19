@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#1e3a5f">
-  <meta name="description" content="热搜聚合 - 一点就看">
-  <title>热搜聚合</title>
+  <meta name="description" content="鐑悳鑱氬悎 - 涓€鐐瑰氨鐪?>
+  <title>鐑悳鑱氬悎</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>馃敟</text></svg>">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -125,7 +125,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .hot {
+    .hot-icon {
       width: 14px;
       height: 14px;
       flex-shrink: 0;
@@ -171,10 +171,6 @@
       justify-content: center;
     }
     .fab:active { transform: scale(0.95); }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
     .install-banner {
       background: linear-gradient(135deg, #1e3a5f, #2d5a87);
       color: #fff;
@@ -199,40 +195,63 @@
     }
     .install-btn:active { background: rgba(255,255,255,0.3); }
     .hide { display: none !important; }
+    .ext-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.5);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .ext-link:active { background: rgba(255,255,255,0.04); }
+    .ext-link-arrow {
+      font-size: 16px;
+      color: rgba(255,255,255,0.3);
+    }
   </style>
 </head>
 <body>
 
 <div id="installBanner" class="install-banner hide">
-  <span>👉 戳这里安装到手机桌面，体验原生App</span>
-  <button class="install-btn" onclick="installApp()">安装</button>
+  <span>馃憠 鎴宠繖閲屽畨瑁呭埌鎵嬫満妗岄潰锛屼綋楠屽師鐢烝pp</span>
+  <button class="install-btn" onclick="installApp()">瀹夎</button>
 </div>
 
 <header>
   <div class="header-title">
-    <span>🔥</span>
-    <span>热搜聚合</span>
+    <span>馃敟</span>
+    <span>鐑悳鑱氬悎</span>
   </div>
   <div class="tabs" id="tabs"></div>
 </header>
 
 <div class="refresh-bar">
   <span id="updateTime">--</span>
-  <button class="refresh-btn" onclick="loadAll()">🔄 刷新</button>
+  <button class="refresh-btn" onclick="loadAll()">馃攧 鍒锋柊</button>
 </div>
 
 <div id="list" class="list"></div>
-<div id="fab" class="fab hide" onclick="scrollToTop()">↑</div>
+<div id="fab" class="fab hide" onclick="scrollToTop()">鈫?/div>
 
 <script>
 const PLATFORMS = [
-  { id: 'weibo',  name: '微博',   url: 'https://weibo.com',    api: 'https://api.今天的热榜.com/ranking/13?app=todayhot&country=cn&lang=zh&sys_id=3' },
-  { id: 'zhihu',  name: '知乎',   url: 'https://www.zhihu.com', api: 'https://api.今天的热榜.com/ranking/5?app=todayhot&country=cn&lang=zh&sys_id=3' },
-  { id: 'baidu',  name: '百度',   url: 'https://top.baidu.com', api: 'https://api.今天的热榜.com/ranking/1?app=todayhot&country=cn&lang=zh&sys_id=3' },
-  { id: 'douyin', name: '抖音',   url: 'https://www.douyin.com', api: 'https://api.今天的热榜.com/ranking/8?app=todayhot&country=cn&lang=zh&sys_id=3' },
+  { id: 'baidu',  name: '鐧惧害',   url: 'https://top.baidu.com' },
+  { id: 'weibo',  name: '寰崥',  url: 'https://weibo.com' },
+  { id: 'zhihu',  name: '鐭ヤ箮',  url: 'https://www.zhihu.com' },
+  { id: 'douyin', name: '鎶栭煶',  url: 'https://www.douyin.com' },
 ];
 
-let currentPlatform = 'weibo';
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+const API_BASE = 'https://zj.v.api.aa1.cn';
+const API_MAP = {
+  baidu:  '/api/baidu-rs/',
+};
+
+let currentPlatform = 'baidu';
 let dataCache = {};
 let deferredPrompt = null;
 
@@ -269,7 +288,7 @@ function scrollToTop() {
 }
 
 function showLoading() {
-  document.getElementById('list').innerHTML = '<div class="loading"><div class="spinner"></div>加载中...</div>';
+  document.getElementById('list').innerHTML = '<div class="loading"><div class="spinner"></div>鍔犺浇涓?..</div>';
 }
 
 function renderList() {
@@ -277,7 +296,7 @@ function renderList() {
   const items = dataCache[currentPlatform];
 
   if (!items || items.length === 0) {
-    listEl.innerHTML = '<div class="error-msg">暂无数据，请下拉刷新</div>';
+    listEl.innerHTML = '<div class="error-msg">鏆傛棤鏁版嵁锛岃瘯璇曠偣鍑诲彸涓婅鍒锋柊</div>';
     return;
   }
 
@@ -285,13 +304,13 @@ function renderList() {
     const rank = i + 1;
     const rankClass = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : 'other';
     const hotSvg = rank <= 3
-      ? `<svg class="hot" viewBox="0 0 24 24" fill="none"><path d="M12 2C10.5 6 7 8 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-4-3.5-6-5-10z" fill="#ff4757"/></svg>`
+      ? `<svg class="hot-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2C10.5 6 7 8 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-4-3.5-6-5-10z" fill="#ff4757"/></svg>`
       : '';
-    const desc = item.desc || item.category || '';
-    const title = item.word || item.title || item.name || item.topic || JSON.stringify(item);
+    const desc = item.desc || item.hot_score || '';
+    const title = item.word || item.title || item.name || JSON.stringify(item);
 
     return `
-      <div class="item" onclick="window.open('${item.url || PLATFORMS.find(p=>p.id===currentPlatform).url}', '_blank')">
+      <div class="item" onclick="window.open('${item.url || item.mobilUrl || PLATFORMS.find(p=>p.id===currentPlatform).url}', '_blank')">
         <div class="rank ${rankClass}">${rank}</div>
         ${hotSvg}
         <div class="content">
@@ -304,18 +323,19 @@ function renderList() {
 }
 
 async function loadAPI(platform) {
-  const p = PLATFORMS.find(p => p.id === platform);
+  const apiPath = API_MAP[platform];
+  if (!apiPath) return [];
+
   try {
-    const resp = await fetch(p.api);
+    const resp = await fetch(CORS_PROXY + encodeURIComponent(API_BASE + apiPath));
     const json = await resp.json();
-    if (json.data) {
+    if (json.data && Array.isArray(json.data)) {
       return json.data.map(item => ({
         word: item.word || item.title,
-        desc: item.desc || item.hot_score || '',
-        url: item.url || item.link || `https://s.weibo.com/weibo?q=${encodeURIComponent(item.word || item.title)}`,
+        desc: item.desc || item.hot || '',
+        url: item.url || item.mobilUrl || `https://www.baidu.com/s?wd=${encodeURIComponent(item.word || item.title)}`,
       }));
     }
-    if (Array.isArray(json)) return json;
     return [];
   } catch (e) {
     console.warn(platform, 'load failed', e);
@@ -329,7 +349,7 @@ async function loadAll() {
     dataCache[p.id] = await loadAPI(p.id);
   }
   renderList();
-  document.getElementById('updateTime').textContent = `更新于 ${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
+  document.getElementById('updateTime').textContent = `鏇存柊浜?${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
 }
 
 window.addEventListener('scroll', () => {
@@ -345,4 +365,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-<!-- 更新一下 -->
