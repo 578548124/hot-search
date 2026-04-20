@@ -30,13 +30,14 @@
     .content { flex: 1; min-width: 0; }
     .title { font-size: 15px; font-weight: 500; color: #e8edf4; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-all; }
     .desc { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .source-tag { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
     .hot-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 3px; }
     .loading { text-align: center; padding: 60px 0; color: rgba(255,255,255,0.4); font-size: 14px; }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #2d5a87; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .error-msg { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.4); font-size: 14px; line-height: 1.8; }
     .error-hint { font-size: 12px; color: rgba(255,255,255,0.25); margin-top: 8px; }
-    .source-tag { font-size: 10px; background: rgba(45,90,135,0.5); padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+    .source-badge { font-size: 10px; background: rgba(45,90,135,0.5); padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
     .fab { position: fixed; bottom: 24px; right: 24px; width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2d5a87, #1e3a5f); color: #fff; border: none; font-size: 20px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
     .fab:active { transform: scale(0.95); }
     .fab-icon { font-size: 18px; }
@@ -60,118 +61,64 @@
 
 <script>
 // ============================================================
-// 静态兜底数据（当 API 请求失败时显示这些数据）
-// 数据源：newsnow.busiyi.world（TrendRadar 引擎）
+// 今日热榜数据（来源：rebang.today，2026-04-20）
 // ============================================================
 var FALLBACK_DATA = {
-  baidu: [
-    {title: "日本发生7.5级地震", desc: "日本气象厅刚刚将此次地震震级调整至7.5级，岩手县宫古港已观测到40cm海啸", url: "https://www.baidu.com/s?wd=日本发生7.5级地震"},
-    {title: "四川内江市资中县发生4.5级地震", desc: "4月20日15时56分，四川内江市资中县发生4.5级地震，震源深度7公里", url: "https://www.baidu.com/s?wd=四川内江市资中县发生4.5级地震"},
-    {title: "中国经济硬核数据再"上新"", desc: "一季度GDP同比增长5.0%，网络视听市场规模达1.29万亿", url: "https://www.baidu.com/s?wd=中国经济硬核数据再上新"},
-    {title: ""红旗1号"芯片研制成功", desc: "中国一汽联合研制国内首颗车规级多域融合芯片", url: "https://www.baidu.com/s?wd=红旗1号芯片研制成功"},
-    {title: "华为发布全球首款大阔折叠手机", desc: "华为Pura X Max售价10999元起，大阔折设计灵感源自A4纸√2:1黄金比例", url: "https://www.baidu.com/s?wd=华为发布全球首款大阔折叠手机"},
-    {title: "男子发现扔烟头地方不长草决定戒烟", desc: "江苏男子发现烟头堆积区寸草不生后醒悟戒烟", url: "https://www.baidu.com/s?wd=男子发现扔烟头地方不长草决定戒烟"},
-    {title: "女子酒窝超大被网友怀疑是AI", desc: "当事人回应：是真的，一直被人说很大", url: "https://www.baidu.com/s?wd=女子酒窝超大被网友怀疑是AI"},
-    {title: "重庆昨夜到今晨共出现8068次闪电", desc: "4月19日18时至20日4时集中在西部地区", url: "https://www.baidu.com/s?wd=重庆昨夜到今晨共出现8068次闪电"},
-    {title: "日本民众被要求立即避难逃生", desc: "日本气象厅发布海啸警报要求相关地区民众立即避难", url: "https://www.baidu.com/s?wd=日本民众被要求立即避难逃生"},
-    {title: "小伙入职1天公司40多部手机"失灵"", desc: "安徽合肥新入职男子涉嫌盗窃手机卡被刑拘", url: "https://www.baidu.com/s?wd=小伙入职1天公司40多部手机失灵"}
-  ],
-  weibo: [
-    {title: "日本地震震级调至7.5级", desc: "日本气象厅调整震级，发布海啸警报", url: "https://s.weibo.com/weibo?q=日本地震震级调至7.5级"},
-    {title: "四川4.5级地震", desc: "四川内江市资中县发生地震，震源深度7公里", url: "https://s.weibo.com/weibo?q=四川4.5级地震"},
-    {title: "习近平全民阅读", desc: "全国首个全民阅读活动周启幕", url: "https://s.weibo.com/weibo?q=习近平全民阅读"},
-    {title: "红旗1号芯片", desc: "国内首颗车规级先进制程多域融合芯片研制成功", url: "https://s.weibo.com/weibo?q=红旗1号芯片"},
-    {title: "华为PuraXMax发布", desc: "华为发布全球首款大阔折叠手机", url: "https://s.weibo.com/weibo?q=华为PuraXMax发布"},
-    {title: "男子发现扔烟头不长草戒烟", desc: "江苏男子扔烟头区域寸草不生决定戒烟", url: "https://s.weibo.com/weibo?q=男子发现扔烟头不长草戒烟"}
-  ],
-  zhihu: [
-    {title: "日本7.5级地震影响有多大", desc: "日本东北海域发生7.5级地震，多地发布海啸预警", url: "https://www.zhihu.com/search?type=content&q=日本7.5级地震"},
-    {title: "全民阅读时代的意义", desc: "全国首个全民阅读活动周启动", url: "https://www.zhihu.com/search?type=content&q=全民阅读时代的意义"},
-    {title: "红旗1号芯片什么水平", desc: "国产车规级多域融合芯片技术分析", url: "https://www.zhihu.com/search?type=content&q=红旗1号芯片什么水平"},
-    {title: "华为大阔折叠手机体验", desc: "华为Pura X Max折叠屏体验如何", url: "https://www.zhihu.com/search?type=content&q=华为大阔折叠手机体验"},
-    {title: "少吃两口真的能抗炎吗", desc: "科学研究：减少摄入量的抗炎效果分析", url: "https://www.zhihu.com/search?type=content&q=少吃两口真的能抗炎吗"}
-  ],
-  douyin: [
-    {title: "日本地震海啸预警中", desc: "日本7.5级地震引发海啸，注意安全", url: "https://www.douyin.com/search?q=日本地震海啸预警"},
-    {title: "全民阅读大会开幕", desc: "第五届全民阅读大会在4月20日同步启幕", url: "https://www.douyin.com/search?q=全民阅读大会开幕"},
-    {title: "华为大阔折叠屏", desc: "华为Pura X Max折叠手机震撼发布", url: "https://www.douyin.com/search?q=华为大阔折叠屏"},
-    {title: "男子发现烟头不长草", desc: "江苏男子发现烟头堆积区寸草不生", url: "https://www.douyin.com/search?q=男子发现烟头不长草"}
-  ],
-  toutiao: [
-    {title: "日本发生7.5级地震", desc: "日本东北部沿海地区地震被调整为7.5级，海啸已到达", url: "https://so.toutiao.com/search?keyword=日本发生7.5级地震"},
-    {title: "四川4.5级地震", desc: "四川内江市资中县发生地震，震源深度7公里", url: "https://so.toutiao.com/search?keyword=四川4.5级地震"},
-    {title: "习近平全民阅读", desc: "全国首个全民阅读活动周启幕", url: "https://so.toutiao.com/search?keyword=习近平全民阅读"}
-  ],
-  bilibili: [
-    {title: "日本地震相关视频", desc: "B站网友关注日本地震最新进展", url: "https://search.bilibili.com/top?keyword=日本地震"},
-    {title: "全民阅读大会", desc: "B站直播第五届全民阅读大会", url: "https://search.bilibili.com/top?keyword=全民阅读"}
-  ],
-  thepaper: [
-    {title: "日本7.5级地震", desc: "日本东北海域发生地震，多地发布海啸预警", url: "https://www.thepaper.cn/search.jsp?qs=日本7.5级地震"},
-    {title: "四川资中4.5级地震", desc: "四川内江市资中县发生4.5级地震", url: "https://www.thepaper.cn/search.jsp?qs=四川资中地震"}
+  all: [
+    {title: "70年产权的房子，实际能住多少年？", source: "知乎", hot: "18489.5", url: "https://www.zhihu.com/question/2018272205939721140"},
+    {title: "为什么云南泼水节变味了？", source: "知乎", hot: "15928.1", url: "https://www.zhihu.com/question/652795560"},
+    {title: "如何看待番茄平台上月稿费80万的金番作者使用AI写作...", source: "知乎", hot: "12340.3", url: "https://www.zhihu.com/question/2027490615500313080"},
+    {title: "网传DeepSeek V4即将发布并提出「去CUDA化」...", source: "知乎", hot: "11324.6", url: "https://www.zhihu.com/question/2028817450829976782"},
+    {title: "如何评价斥资5亿的电影《寻龙诀·觅踪》直接网播了？", source: "知乎", hot: "9188.3", url: "https://www.zhihu.com/question/2027812510628069389"},
+    {title: "公司升级服务器淘汰72根DDR4内存被员工捡回：总容量约2.25TB", source: "IT之家", hot: "9171.4", url: "https://www.ithome.com/0/940/930.htm"},
+    {title: "梁家辉五封影帝，马来西亚籍廖子妤打败章子怡夺影后", source: "知乎", hot: "8907.1", url: "https://www.zhihu.com/question/2029285410929480068"},
+    {title: "网传社科院发布2025中国城市宜居水平排行榜", source: "知乎", hot: "8507.6", url: "https://www.zhihu.com/question/2028968003417498254"},
+    {title: "WSBK荷兰站张雪机车斩获第七名，此前热身赛拿下第一", source: "知乎", hot: "7576.6", url: "https://www.zhihu.com/question/2029259993174601951"},
+    {title: "内存涨价会不会倒逼软件优化，让2gb甚至512m配置重新流行？", source: "知乎", hot: "6418.3", url: "https://www.zhihu.com/question/2018673868974370892"},
+    {title: "美以袭击伊朗进入第52天，当前局势如何？", source: "知乎", hot: "6306.7", url: "https://www.zhihu.com/question/2029314093757064288"},
+    {title: "四大一线城市房价全线上涨，这代表楼市回暖吗？", source: "知乎", hot: "6048.4", url: "https://www.zhihu.com/question/2028419848833708708"},
+    {title: "如何评价李雨桐泄露薛之谦手机号、身份证被行拘？", source: "知乎", hot: "5975.7", url: "https://www.zhihu.com/question/2029251695079682936"},
+    {title: "华为Pura X Max横向阔折叠手机真机曝光，展开就像小平板", source: "IT之家", hot: "5872.1", url: "https://www.ithome.com/0/940/868.htm"},
+    {title: "山西一酒店回访电话暴露行程致家庭破碎？网友热议", source: "知乎", hot: "5850.6", url: "https://www.zhihu.com/question/2029076341014770809"},
+    {title: "宇树人形机器人打破人类1500米世界纪录", source: "知乎", hot: "5830.4", url: "https://www.zhihu.com/question/2029148050057077679"},
+    {title: "为什么沙特会愿意让巴基斯坦驻军自己国家？", source: "知乎", hot: "5782", url: "https://www.zhihu.com/question/2028941915911984616"},
+    {title: "珠海慈善总会号召为乡村孩子捐午睡桌椅，市区孩子仍趴桌午睡", source: "知乎", hot: "5152.4", url: "https://www.zhihu.com/question/2029208982745609165"},
+    {title: "国产光纤全球爆单，部分产品价格暴涨650%", source: "知乎", hot: "5134.9", url: "https://www.zhihu.com/question/2029114416180851719"},
+    {title: "【喷嚏图卦】我只是人", source: "喷嚏网", hot: "5012.8", url: "http://www.dapenti.com/blog/more.asp?name=xilei&id=192516"}
   ]
 };
 
-// 平台配置（使用 newsnow.busiyi.world API，数据来源：TrendRadar）
+// 平台 tabs
 var PLATFORMS = [
-  { id: 'baidu',  name: '百度' },
-  { id: 'weibo',  name: '微博' },
-  { id: 'toutiao', name: '头条' },
-  { id: 'zhihu',  name: '知乎' },
-  { id: 'douyin', name: '抖音' },
-  { id: 'bilibili', name: 'B站' },
-  { id: 'thepaper', name: '澎湃' }
+  { id: 'all',  name: '全站' }
 ];
 
-// newsnow API 数据格式转换
-function parseNewsNow(data, platformId) {
-  if (!data || !data.items || !Array.isArray(data.items)) return null;
-  return data.items.map(function(item) {
-    var title = item.title || '';
-    var desc = (item.extra && item.extra.hover) ? item.extra.hover : '';
-    var url = item.url || item.mobileUrl || '';
-    return { title: title, desc: desc.slice(0, 80), url: url };
-  }).filter(function(item) { return item.title; });
-}
-
-var currentPlatform = 'baidu';
-var dataCache = {};
-var _scriptCounter = 0;
+var currentPlatform = 'all';
+var dataCache = { all: FALLBACK_DATA.all };
 var _netError = false;
 
-function loadAPI(platformId) {
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadRebang() {
   return new Promise(function(resolve) {
-    var p = PLATFORMS.find(function(x) { return x.id === platformId; });
-    if (!p) { resolve([]); return; }
-
-    // 使用 newsnow API（TrendRadar 引擎）
-    var apiUrl = 'https://newsnow.busiyi.world/api/s?id=' + platformId + '&latest';
-
-    var script = document.createElement('script');
-    var resolved = false;
     var timeout = setTimeout(function() {
-      if (!resolved) {
-        resolved = true;
-        cleanup();
-        _netError = true;
-        resolve(FALLBACK_DATA[platformId] || []);
-      }
-    }, 10000);
+      _netError = true;
+      resolve(null);
+    }, 12000);
 
-    function cleanup() {
+    // 通过 CORS proxy 获取 rebang.today 页面内容
+    var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://rebang.today/');
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', proxyUrl, true);
+    xhr.onload = function() {
       clearTimeout(timeout);
-      script.onload = null;
-      script.onerror = null;
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    // newsnow API 返回 {status, id, updatedTime, items: [{title, url, extra: {hover}}]}
-    window._newsNowCallback = function(data) {
-      if (resolved) return;
-      resolved = true;
-      cleanup();
-      if (data && data.status === 'success') {
-        var items = parseNewsNow(data, platformId);
+      if (xhr.status === 200) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(xhr.responseText, 'text/html');
+        var items = parseRebangDOM(doc);
         if (items && items.length > 0) {
           _netError = false;
           resolve(items);
@@ -179,19 +126,53 @@ function loadAPI(platformId) {
         }
       }
       _netError = true;
-      resolve(FALLBACK_DATA[platformId] || []);
+      resolve(null);
     };
-
-    script.onerror = function() {
-      if (resolved) return;
-      resolved = true;
-      cleanup();
+    xhr.onerror = function() {
+      clearTimeout(timeout);
       _netError = true;
-      resolve(FALLBACK_DATA[platformId] || []);
+      resolve(null);
     };
+    xhr.send();
+  });
+}
 
-    script.src = apiUrl + '&callback=_newsNowCallback&t=' + (++_scriptCounter) + '_' + Date.now();
-    document.head.appendChild(script);
+function parseRebangDOM(doc) {
+  try {
+    var items = [];
+    // rebang.today 页面结构：listitem 包含 rank / title / source / hot
+    var listItems = doc.querySelectorAll('main .listitem');
+    listItems.forEach(function(li) {
+      var rankEl = li.querySelector('.rank, [class*="rank"]');
+      var linkEl = li.querySelector('a[href*="zhihu"], a[href*="weibo"], a[href*="ithome"], a[href*="douban"]');
+      if (!linkEl) return;
+      var title = linkEl.textContent.trim().substring(0, 80);
+      // 去掉标题中的描述文字（标题后紧跟的内容）
+      var rawTitle = title;
+      var url = linkEl.href;
+      // 来源
+      var sourceEl = li.querySelector('[class*="source"], [class*="tag"]');
+      var source = sourceEl ? sourceEl.textContent.trim() : '热榜';
+      // 热度
+      var hotEl = li.querySelector('[class*="hot"], [class*="heat"]');
+      var hot = hotEl ? hotEl.textContent.trim().replace('热度', '') : '';
+      if (title) {
+        items.push({ title: title, source: source, hot: hot, url: url });
+      }
+    });
+    return items;
+  } catch(e) {
+    return null;
+  }
+}
+
+function loadAPI(platformId) {
+  return loadRebang().then(function(items) {
+    if (items) {
+      dataCache[platformId] = items;
+      return items;
+    }
+    return FALLBACK_DATA[platformId] || [];
   });
 }
 
@@ -221,21 +202,14 @@ function showLoading() {
   document.getElementById('list').innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
 }
 
-function escHtml(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 function renderList() {
   var listEl = document.getElementById('list');
   var items = dataCache[currentPlatform];
   if (!items || items.length === 0) {
-    var platform = PLATFORMS.find(function(p) { return p.id === currentPlatform; });
-    var sourceHint = platform ? '<span class="source-tag">newsnow API</span>' : '';
     var hint = _netError
-      ? '<div class="error-hint">实时数据获取失败，显示本地缓存数据<br>数据来源：TrendRadar / newsnow</div>'
+      ? '<div class="error-hint">实时数据获取失败，显示本地缓存数据<br>数据来源：rebang.today 今日热榜</div>'
       : '<div class="error-hint">数据加载失败，请点击刷新按钮重试</div>';
-    listEl.innerHTML = '<div class="error-msg">No data. Try refresh.' + sourceHint + hint + '</div>';
+    listEl.innerHTML = '<div class="error-msg">No data. Try refresh.<span class="source-badge">rebang.today</span>' + hint + '</div>';
     return;
   }
   window._netError = false;
@@ -245,13 +219,12 @@ function renderList() {
     var rank = i + 1;
     var rankCls = rank === 1 ? 'rank top1' : rank === 2 ? 'rank top2' : rank === 3 ? 'rank top3' : 'rank other';
     var hotSvg = rank <= 3 ? '<svg class="hot-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2C10.5 6 7 8 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-4-3.5-6-5-10z" fill="#ff4757"/></svg>' : '';
-    var link = item.url || '#';
-    html += '<div class="item" data-url="' + link + '">' +
+    html += '<div class="item" data-url="' + (item.url || '#') + '">' +
       '<div class="' + rankCls + '">' + rank + '</div>' +
       hotSvg +
       '<div class="content">' +
         '<div class="title">' + escHtml(item.title) + '</div>' +
-        (item.desc ? '<div class="desc">' + escHtml(item.desc) + '</div>' : '') +
+        '<div class="source-tag">' + escHtml(item.source || '') + (item.hot ? ' · ' + item.hot + '热度' : '') + '</div>' +
       '</div>' +
     '</div>';
   }
@@ -267,11 +240,7 @@ function renderList() {
 
 async function loadAll() {
   showLoading();
-  var promises = PLATFORMS.map(function(p) { return loadAPI(p.id); });
-  var results = await Promise.all(promises);
-  for (var i = 0; i < PLATFORMS.length; i++) {
-    dataCache[PLATFORMS[i].id] = results[i] || [];
-  }
+  dataCache[currentPlatform] = await loadAPI(currentPlatform);
   renderList();
   var now = new Date();
   document.getElementById('updateTime').textContent =
