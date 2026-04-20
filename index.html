@@ -56,7 +56,7 @@
 </div>
 
 <div id="list" class="list"></div>
-<div id="fab" class="fab hide" id="fabBtn"><span class="fab-icon">&#x2191;</span></div>
+<div id="fab" class="fab hide"><span class="fab-icon">&#x2191;</span></div>
 
 <script>
 // API always wraps response in hotlist(data) - so we MUST call back from here
@@ -222,7 +222,7 @@ async function loadAll() {
 }
 
 document.getElementById('refreshBtn').addEventListener('click', loadAll);
-document.getElementById('fabBtn').addEventListener('click', scrollToTop);
+document.getElementById('fab').addEventListener('click', scrollToTop);
 
 window.addEventListener('scroll', function() {
   document.getElementById('fab').classList.toggle('hide', window.scrollY < 300);
