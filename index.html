@@ -60,20 +60,19 @@
 
 <script>
 // ============================================================
-// 平台配置（使用 tophub.today，通过 CORS 代理抓取）
+// 配置：Cloudflare Worker API
 // ============================================================
-var CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+var WORKER_URL = 'https://hotsearch-worker.haiyun954123.workers.dev';
 
 var PLATFORMS = [
-  { id: 'all',     name: '全站',  url: 'https://tophub.today/c/news' },
-  { id: 'baidu',   name: '百度',  url: 'https://tophub.today/n/Jb0vmloB1G' },
-  { id: 'weibo',   name: '微博',  url: 'https://tophub.today/n/KqndgxeLl9' },
-  { id: 'zhihu',   name: '知乎',  url: 'https://tophub.today/n/mproPpoq6O' },
-  { id: 'weixin',  name: '微信',  url: 'https://tophub.today/n/WnBe01o371' },
-  { id: 'thepaper',name: '澎湃',  url: 'https://tophub.today/n/wWmoO5Rd4E' },
-  { id: 'zhihu_z', name: '知乎日报', url: 'https://tophub.today/n/ZnJ99yO7oR' },
-  { id: 'huxiu',   name: '虎嗅',  url: 'https://tophub.today/n/NR2Gp9dO0v' },
-  { id: 'ithome',  name: 'IT之家', url: 'https://tophub.today/n/K9dAp明月' },
+  { id: 'all',     name: '全站' },
+  { id: 'baidu',   name: '百度' },
+  { id: 'weibo',   name: '微博' },
+  { id: 'zhihu',   name: '知乎' },
+  { id: 'weixin',  name: '微信' },
+  { id: 'thepaper',name: '澎湃' },
+  { id: 'huxiu',   name: '虎嗅' },
+  { id: 'ithome',  name: 'IT之家' },
 ];
 
 // 兜底数据（tophub.today 服务端渲染，SPA 无法直抓时显示这些）
@@ -178,26 +177,25 @@ function parseTopHubHTML(html, platformId) {
 
 function loadAPI(platformId) {
   return new Promise(function(resolve) {
-    var p = PLATFORMS.find(function(x) { return x.id === platformId; });
-    if (!p) { resolve([]); return; }
-
-    var proxyUrl = CORS_PROXY + encodeURIComponent(p.url);
     var timeout = setTimeout(function() {
       _netError = true;
       resolve(FALLBACK_DATA[platformId] || FALLBACK_DATA['all'] || []);
-    }, 15000);
+    }, 12000);
 
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', proxyUrl, true);
+    xhr.open('GET', WORKER_URL + '/api/' + platformId, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = function() {
       clearTimeout(timeout);
-      if (xhr.status === 200 && xhr.responseText.length > 1000) {
-        var items = parseTopHubHTML(xhr.responseText, platformId);
-        if (items && items.length > 0) {
-          _netError = false;
-          resolve(items);
-          return;
-        }
+      if (xhr.status === 200 && xhr.responseText) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          if (data.code === 1 && data.items && data.items.length > 0) {
+            _netError = false;
+            resolve(data.items);
+            return;
+          }
+        } catch(e) {}
       }
       _netError = true;
       resolve(FALLBACK_DATA[platformId] || FALLBACK_DATA['all'] || []);
@@ -275,17 +273,10 @@ function renderList() {
 
 async function loadAll() {
   showLoading();
-  // 预加载前两个平台的数据
-  var promises = [
-    loadAPI('all'),
-    loadAPI('baidu'),
-    loadAPI('weibo')
-  ];
-  var results = await Promise.all(promises);
-  dataCache['all'] = results[0] || [];
-  dataCache['baidu'] = results[1] || [];
-  dataCache['weibo'] = results[2] || [];
-  
+  // 预加载当前平台
+  var items = await loadAPI(currentPlatform);
+  dataCache[currentPlatform] = items;
+
   // 其他平台暂时用兜底
   PLATFORMS.forEach(function(p) {
     if (!dataCache[p.id]) {
