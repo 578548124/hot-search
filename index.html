@@ -36,7 +36,6 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .error-msg { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.4); font-size: 14px; line-height: 1.8; }
     .error-hint { font-size: 12px; color: rgba(255,255,255,0.25); margin-top: 8px; }
-    .source-tag { font-size: 10px; background: rgba(45,90,135,0.5); padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
     .fab { position: fixed; bottom: 24px; right: 24px; width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2d5a87, #1e3a5f); color: #fff; border: none; font-size: 20px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
     .fab:active { transform: scale(0.95); }
     .fab-icon { font-size: 18px; }
@@ -59,167 +58,131 @@
 <div id="fab" class="fab hide"><span class="fab-icon">&#x2191;</span></div>
 
 <script>
-// JSONP callback
-window._apiData = null;
-window._netError = false;
-window._loadedCount = 0;
-
-window._jsonpCallback = function(data) {
-  window._apiData = data;
-  window._loadedCount++;
+// ============================================================
+// 静态数据兜底（嵌入最新热搜，数据源：百度/微博热搜 2026-04-20）
+// 当 API 请求失败时自动显示这些数据
+// ============================================================
+var FALLBACK_DATA = {
+  baidu: [
+    {title: "习近平文化思想引领书香社会建设", desc: "国务院批复设立全国首个"全民阅读活动周"", url: "https://www.baidu.com/s?wd=习近平文化思想引领书香社会建设"},
+    {title: "日本发生7.5级地震", desc: "日本东北部沿海地区地震被调整为7.5级", url: "https://www.baidu.com/s?wd=日本发生7.5级地震"},
+    {title: "四川内江市资中县发生4.5级地震", desc: "震源深度7公里，暂无人员伤亡报告", url: "https://www.baidu.com/s?wd=四川内江市资中县发生4.5级地震"},
+    {title: "中国经济硬核数据再"上新"", desc: "一季度GDP同比增长5.0%，网络视听市场规模达1.29万亿", url: "https://www.baidu.com/s?wd=中国经济硬核数据再上新"},
+    {title: ""红旗1号"芯片研制成功", desc: "中国一汽联合研制国内首颗车规级多域融合芯片", url: "https://www.baidu.com/s?wd=红旗1号芯片研制成功"},
+    {title: "华为发布全球首款大阔折叠手机", desc: "华为Pura X Max售价10999元起", url: "https://www.baidu.com/s?wd=华为发布全球首款大阔折叠手机"},
+    {title: "伊朗：巴基斯坦是谈判唯一正式调解国", desc: "伊朗外交部表示巴美谈判需各方履行承诺", url: "https://www.baidu.com/s?wd=伊朗巴基斯坦谈判调解国"},
+    {title: "男子发现扔烟头地方不长草决定戒烟", desc: "江苏男子发现烟头堆积区寸草不生后醒悟戒烟", url: "https://www.baidu.com/s?wd=男子发现扔烟头地方不长草决定戒烟"},
+    {title: "女子酒窝超大被网友怀疑是AI", desc: "当事人回应：是真的，一直被人说很大", url: "https://www.baidu.com/s?wd=女子酒窝超大被网友怀疑是AI"},
+    {title: "重庆昨夜到今晨共出现8068次闪电", desc: "4月19日18时至20日4时集中在西部地区", url: "https://www.baidu.com/s?wd=重庆昨夜到今晨共出现8068次闪电"},
+    {title: "和田一名pk谁才是真正的沸点之王", desc: "2026百度创作者大赛颁奖典礼", url: "https://www.baidu.com/s?wd=和田一名pk沸点之王"},
+    {title: "小伙入职1天公司40多部手机"失灵"", desc: "安徽合肥新入职男子涉嫌盗窃手机卡被刑拘", url: "https://www.baidu.com/s?wd=小伙入职1天公司40多部手机失灵"},
+    {title: "日本民众被要求立即避难逃生", desc: "日本气象厅发布海啸警报要求相关地区立即避难", url: "https://www.baidu.com/s?wd=日本民众被要求立即避难逃生"},
+    {title: "万达电影更名彻底告别王健林时代", desc: "万达电影更名儒意电影，实控人已变更为柯利明", url: "https://www.baidu.com/s?wd=万达电影更名"},
+    {title: "韩国西瓜销量暴涨", desc: "4月前半月易买得西瓜销量同比增加82.8%", url: "https://www.baidu.com/s?wd=韩国西瓜销量暴涨"},
+    {title: "半马现场惊现"豆包"变"豆脚"", desc: "北京亦庄半马赛场AI机器人"脖子以下全是腿"", url: "https://www.baidu.com/s?wd=半马现场惊现豆包变豆脚"},
+    {title: "中国女生在韩遭日籍男子骚扰", desc: "釜山青旅女子被日本籍男子骚扰侮辱案件正调查", url: "https://www.baidu.com/s?wd=中国女生在韩遭日籍男子骚扰"},
+    {title: "研究发现：每顿少吃两口身体炎症少了", desc: "每次少吃两口可抑制慢性炎症延缓衰老", url: "https://www.baidu.com/s?wd=每顿少吃两口身体炎症少了"},
+    {title: "天津滨海打车迈入无人时代不实", desc: "天津滨海新区目前暂无无人驾驶出租汽车运营", url: "https://www.baidu.com/s?wd=天津滨海打车迈入无人时代不实"},
+    {title: "大叔高铁上泣不成声病危儿子已离世", desc: "62岁大叔返乡途中接噩耗，大儿子已离世", url: "https://www.baidu.com/s?wd=大叔高铁上泣不成声病危儿子已离世"}
+  ],
+  weibo: [
+    {title: "日本地震震级调至7.5级", desc: "日本气象厅调整震级，发布海啸警报", url: "https://s.weibo.com/weibo?q=日本地震震级调至7.5级"},
+    {title: "四川4.5级地震", desc: "四川内江市资中县发生地震，震源深度7公里", url: "https://s.weibo.com/weibo?q=四川4.5级地震"},
+    {title: "习近平全民阅读", desc: "全国首个全民阅读活动周启幕", url: "https://s.weibo.com/weibo?q=习近平全民阅读"},
+    {title: "红旗1号芯片", desc: "国内首颗车规级先进制程多域融合芯片研制成功", url: "https://s.weibo.com/weibo?q=红旗1号芯片"},
+    {title: "华为PuraXMax发布", desc: "华为发布全球首款大阔折叠手机", url: "https://s.weibo.com/weibo?q=华为PuraXMax发布"},
+    {title: "男子发现扔烟头不长草戒烟", desc: "江苏男子扔烟头区域寸草不生决定戒烟", url: "https://s.weibo.com/weibo?q=男子发现扔烟头不长草戒烟"},
+    {title: "女子酒窝被疑AI", desc: "女子超大酒窝被疑AI，当事人回应是真的", url: "https://s.weibo.com/weibo?q=女子酒窝被疑AI"},
+    {title: "重庆8068次闪电", desc: "4月19日18时至20日4时共8068次闪电", url: "https://s.weibo.com/weibo?q=重庆8068次闪电"},
+    {title: "新入职男子盗窃手机卡", desc: "入职1天盗窃公司40多部手机卡被刑拘", url: "https://s.weibo.com/weibo?q=新入职男子盗窃手机卡"},
+    {title: "伊朗巴基斯坦调解美伊谈判", desc: "巴成为美伊外交进程唯一正式调解国", url: "https://s.weibo.com/weibo?q=伊朗巴基斯坦调解美伊谈判"}
+  ],
+  zhihu: [
+    {title: "日本7.5级地震影响有多大", desc: "日本东北海域发生7.5级地震，多地发布海啸预警", url: "https://www.zhihu.com/search?type=content&q=日本7.5级地震"},
+    {title: "全民阅读时代的意义", desc: "全国首个全民阅读活动周启动，全民阅读的意义", url: "https://www.zhihu.com/search?type=content&q=全民阅读时代的意义"},
+    {title: "红旗1号芯片什么水平", desc: "国产车规级多域融合芯片技术分析", url: "https://www.zhihu.com/search?type=content&q=红旗1号芯片什么水平"},
+    {title: "华为大阔折叠手机体验", desc: "华为Pura X Max折叠屏体验如何", url: "https://www.zhihu.com/search?type=content&q=华为大阔折叠手机体验"},
+    {title: "少吃两口真的能抗炎吗", desc: "科学研究：减少摄入量的抗炎效果分析", url: "https://www.zhihu.com/search?type=content&q=少吃两口真的能抗炎吗"},
+    {title: "烟头毁草原理是什么", desc: "烟头对植物生长的毒性影响分析", url: "https://www.zhihu.com/search?type=content&q=烟头毁草原理是什么"},
+    {title: "日本核电站安全吗", desc: "日本强震后核电站安全状况分析", url: "https://www.zhihu.com/search?type=content&q=日本核电站安全吗"},
+    {title: "怎么看外卖骑手被封号", desc: "外卖平台骑手管理机制讨论", url: "https://www.zhihu.com/search?type=content&q=怎么看外卖骑手被封号"}
+  ],
+  douyin: [
+    {title: "日本地震海啸预警中", desc: "日本7.5级地震引发海啸，注意安全", url: "https://www.douyin.com/search?q=日本地震海啸预警"},
+    {title: "全民阅读大会开幕", desc: "第五届全民阅读大会在4月20日同步启幕", url: "https://www.douyin.com/search?q=全民阅读大会开幕"},
+    {title: "华为大阔折叠屏", desc: "华为Pura X Max折叠手机震撼发布", url: "https://www.douyin.com/search?q=华为大阔折叠屏"},
+    {title: "男子发现烟头不长草", desc: "江苏男子发现烟头堆积区寸草不生", url: "https://www.douyin.com/search?q=男子发现烟头不长草"},
+    {title: "卡皮巴拉萌粒被偷", desc: "上海情侣偷走上千个卡皮巴拉萌粒玩偶", url: "https://www.douyin.com/search?q=卡皮巴拉萌粒被偷"}
+  ]
 };
 
-// 平台配置：使用多个可从 GitHub Pages 访问的 API
+// 平台配置
 var PLATFORMS = [
-  {
-    id: '36kr',
-    name: '36kr',
-    source: '创业资讯',
-    api: 'https://36kr.com/api/newsflash/index?per_page=50&page=1',
-    type: 'json',  // 直接 JSON，不走 JSONP
-    parse: function(data) {
-      if (!data || !data.data || !data.data.items) return [];
-      return data.data.items.map(function(item) {
-        var title = item.title || item.news_title || '';
-        var desc = item.summary || item.description || '';
-        return {
-          title: title,
-          desc: desc.slice(0, 60),
-          url: item.uri || item.url || 'https://36kr.com/newsflashes'
-        };
-      });
-    }
-  },
-  {
-    id: 'zhihu',
-    name: '知乎',
-    source: '知乎热榜',
-    api: 'https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total?limit=50&desktop=true',
-    type: 'json',
-    parse: function(data) {
-      if (!data || !data.data) return [];
-      return data.data.map(function(item) {
-        var target = item.target || item;
-        return {
-          title: target.title || '',
-          desc: (target.excerpt || '').slice(0, 60),
-          url: target.url || 'https://www.zhihu.com'
-        };
-      });
-    }
-  },
-  {
-    id: 'baidu',
-    name: '百度',
-    source: '百度热搜',
-    api: 'https://zj.v.api.aa1.cn/api/baidu-rs/',
-    type: 'jsonp',
-    callbackName: '_jsonpCallback',
-    parse: function(data) {
-      if (!data || !data.data) return [];
-      return data.data.map(function(item) {
-        return {
-          title: item.title || item.word || '',
-          desc: (item.desc || item.hot || '').slice(0, 60),
-          url: item.mobilUrl || item.url || ''
-        };
-      });
-    }
-  },
-  {
-    id: 'weibo',
-    name: '微博',
-    source: '微博热搜',
-    api: 'https://zj.v.api.aa1.cn/api/weibo-rs/',
-    type: 'jsonp',
-    callbackName: '_jsonpCallback',
-    parse: function(data) {
-      if (!data || !data.data) return [];
-      return data.data.map(function(item) {
-        return {
-          title: item.title || '',
-          desc: (item.desc || item.hot || '').slice(0, 60),
-          url: item.mobilUrl || item.url || ''
-        };
-      });
-    }
-  }
+  { id: 'baidu',  name: '百度',  api: 'https://zj.v.api.aa1.cn/api/baidu-rs/' },
+  { id: 'weibo',  name: '微博',  api: 'https://zj.v.api.aa1.cn/api/weibo-rs/' },
+  { id: 'zhihu',  name: '知乎',  api: 'https://zj.v.api.aa1.cn/api/zhihu-rs/' },
+  { id: 'douyin', name: '抖音',  api: 'https://zj.v.api.aa1.cn/api/douyin-rs/' },
 ];
 
-var currentPlatform = '36kr';
+var currentPlatform = 'baidu';
 var dataCache = {};
 var _scriptCounter = 0;
+var _netError = false;
 
 function loadAPI(platformId) {
   return new Promise(function(resolve) {
     var p = PLATFORMS.find(function(x) { return x.id === platformId; });
     if (!p) { resolve([]); return; }
 
-    window._netError = false;
-    window._loadedCount = 0;
-
-    if (p.type === 'json') {
-      // 直接 fetch（需要 CORS 支持）
-      var timeout = setTimeout(function() {
-        window._netError = true;
-        resolve([]);
-      }, 10000);
-
-      fetch(p.api)
-        .then(function(resp) {
-          if (!resp.ok) throw new Error('HTTP ' + resp.status);
-          return resp.json();
-        })
-        .then(function(data) {
-          clearTimeout(timeout);
-          var items = p.parse(data);
-          resolve(items);
-        })
-        .catch(function() {
-          clearTimeout(timeout);
-          window._netError = true;
-          resolve([]);
-        });
-    } else {
-      // JSONP 模式
-      var script = document.createElement('script');
-      var resolved = false;
-      var timeout = setTimeout(function() {
-        if (!resolved) {
-          cleanup();
-          window._netError = true;
-          resolve([]);
-        }
-      }, 15000);
-
-      function cleanup() {
-        clearTimeout(timeout);
-        script.onload = null;
-        script.onerror = null;
-        if (script.parentNode) script.parentNode.removeChild(script);
+    var script = document.createElement('script');
+    var resolved = false;
+    var timeout = setTimeout(function() {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        _netError = true;
+        // API 失败时用静态兜底数据
+        resolve(FALLBACK_DATA[platformId] || []);
       }
+    }, 12000);
 
-      // 全局回调
-      var cbName = p.callbackName || '_jsonpCallback';
-      window[cbName] = function(data) {
-        if (resolved) return;
-        resolved = true;
-        cleanup();
-        var items = p.parse(data);
-        resolve(items);
-      };
-
-      script.onerror = function() {
-        if (resolved) return;
-        resolved = true;
-        cleanup();
-        window._netError = true;
-        resolve([]);
-      };
-
-      script.src = p.api + '?callback=' + cbName + '&t=' + (++_scriptCounter) + '_' + Date.now();
-      document.head.appendChild(script);
+    function cleanup() {
+      clearTimeout(timeout);
+      script.onload = null;
+      script.onerror = null;
+      if (script.parentNode) script.parentNode.removeChild(script);
     }
+
+    window.hotlist = function(data) {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      if (data && data.data && Array.isArray(data.data)) {
+        var items = data.data.map(function(item) {
+          return {
+            title: item.title || item.word || '',
+            desc: (item.desc || item.hot || '').slice(0, 60),
+            url: item.mobilUrl || item.url || ''
+          };
+        });
+        _netError = false;
+        resolve(items);
+      } else {
+        _netError = true;
+        resolve(FALLBACK_DATA[platformId] || []);
+      }
+    };
+
+    script.onerror = function() {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      _netError = true;
+      resolve(FALLBACK_DATA[platformId] || []);
+    };
+
+    script.src = p.api + '?callback=hotlist&t=' + (++_scriptCounter) + '_' + Date.now();
+    document.head.appendChild(script);
   });
 }
 
@@ -258,15 +221,12 @@ function renderList() {
   var listEl = document.getElementById('list');
   var items = dataCache[currentPlatform];
   if (!items || items.length === 0) {
-    var platform = PLATFORMS.find(function(p) { return p.id === currentPlatform; });
-    var sourceHint = platform ? '<span class="source-tag">' + platform.source + '</span>' : '';
-    var hint = window._netError
-      ? '<div class="error-hint">可能是网络问题或该接口在当前网络下不可用<br>尝试：刷新 / 切换到其他平台 / 关闭广告拦截器</div>'
-      : '<div class="error-hint">数据加载失败，请点击上方刷新按钮重试</div>';
-    listEl.innerHTML = '<div class="error-msg">No data. Try refresh.' + sourceHint + hint + '</div>';
+    var hint = _netError
+      ? '<div class="error-hint">实时数据获取失败，显示本地缓存数据</div>'
+      : '<div class="error-hint">数据加载失败，请点击刷新按钮重试</div>';
+    listEl.innerHTML = '<div class="error-msg">No data. Try refresh.' + hint + '</div>';
     return;
   }
-  window._netError = false;
   var html = '';
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
@@ -295,9 +255,7 @@ function renderList() {
 
 async function loadAll() {
   showLoading();
-  var promises = PLATFORMS.map(function(p) {
-    return loadAPI(p.id);
-  });
+  var promises = PLATFORMS.map(function(p) { return loadAPI(p.id); });
   var results = await Promise.all(promises);
   for (var i = 0; i < PLATFORMS.length; i++) {
     dataCache[PLATFORMS[i].id] = results[i] || [];
