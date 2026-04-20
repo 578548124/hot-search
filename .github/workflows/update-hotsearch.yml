@@ -1,0 +1,36 @@
+name: Update Hot Search Data
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 每天北京时间 08:00 自动更新
+  workflow_dispatch:          # 手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install requests beautifulsoup4
+
+      - name: Scrape and update hot search data
+        run: python .github/workflows/scrape.py
+
+      - name: Commit and push
+        run: |
+          if git diff --stat | grep -q index.html; then
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git config user.name "GitHub Actions Bot"
+            git add index.html
+            DATE=$(date +"%Y-%m-%d %H:%M")
+            git commit -m "chore: auto-update hot search data $DATE"
+            git push
+          else
+            echo "No changes — skipping push"
+          fi
