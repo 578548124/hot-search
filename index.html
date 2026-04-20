@@ -37,6 +37,7 @@
     .error-msg { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.4); font-size: 14px; }
     .fab { position: fixed; bottom: 24px; right: 24px; width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2d5a87, #1e3a5f); color: #fff; border: none; font-size: 20px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
     .fab:active { transform: scale(0.95); }
+    .fab-icon { font-size: 18px; }
     .hide { display: none !important; }
   </style>
 </head>
@@ -53,12 +54,17 @@
 </div>
 
 <div id="list" class="list"></div>
-<div id="fab" class="fab hide" id="fabBtn">&#x2191;</div>
+<div id="fab" class="fab hide" id="fabBtn"><span class="fab-icon">&#x2191;</span></div>
 
 <script>
-// The API uses 'hotlist' as the JSONP callback function name
+// API always wraps response in hotlist(data) - so we MUST call back from here
 window.hotlist = function(data) {
-  window._hotData = data;
+  window._apiData = data;
+  if (window._jsonpResolve) {
+    window._jsonpResolve(data);
+    window._jsonpResolve = null;
+    window._jsonpReject = null;
+  }
 };
 
 var PLATFORMS = [
@@ -70,53 +76,52 @@ var PLATFORMS = [
 
 var currentPlatform = 'baidu';
 var dataCache = {};
-var loadScriptId = 0;
+var _scriptCounter = 0;
 
-function jsonp(url, callback) {
-  var id = 'cb_' + (++loadScriptId);
-  var script = document.createElement('script');
-  var timeout = setTimeout(function() {
-    cleanup();
-    callback(null);
-  }, 15000);
+function loadAPI(platformId) {
+  return new Promise(function(resolve) {
+    var p = PLATFORMS.find(function(x) { return x.id === platformId; });
+    if (!p) { resolve([]); return; }
 
-  function cleanup() {
-    clearTimeout(timeout);
-    if (script.parentNode) script.parentNode.removeChild(script);
-  }
+    var script = document.createElement('script');
+    var timeout = setTimeout(function() {
+      cleanup();
+      resolve([]);
+    }, 15000);
 
-  // Store callback in global scope with fixed name 'hotlist'
-  // The API always calls window.hotlist()
-  window._jsonpCallback = callback;
-  script.src = url + '?callback=hotlist';
-  script.onload = function() {
-    cleanup();
-    // After script loads, window.hotlist was called and set _hotData
-    callback(window._hotData);
-  };
-  script.onerror = function() {
-    cleanup();
-    callback(null);
-  };
-  document.head.appendChild(script);
-}
-
-function loadAPI(platformId, callback) {
-  var p = PLATFORMS.find(function(x) { return x.id === platformId; });
-  if (!p) { callback([]); return; }
-  jsonp(p.api, function(data) {
-    if (!data || !data.data || !Array.isArray(data.data)) {
-      callback([]);
-      return;
+    function cleanup() {
+      clearTimeout(timeout);
+      script.onload = null;
+      script.onerror = null;
+      if (script.parentNode) script.parentNode.removeChild(script);
     }
-    var items = data.data.map(function(item) {
-      return {
-        title: item.title || item.word || '',
-        desc: item.desc || item.hot || '',
-        url: item.mobilUrl || item.url || ''
-      };
-    });
-    callback(items);
+
+    // onload fires when script text has been executed (not just when received)
+    script.onload = function() {
+      cleanup();
+      var d = window._apiData;
+      if (d && d.data && Array.isArray(d.data)) {
+        var items = d.data.map(function(item) {
+          return {
+            title: item.title || item.word || item.name || '',
+            desc: item.desc || item.hot || '',
+            url: item.mobilUrl || item.url || ''
+          };
+        });
+        resolve(items);
+      } else {
+        resolve([]);
+      }
+    };
+
+    script.onerror = function() {
+      cleanup();
+      resolve([]);
+    };
+
+    // Cache-bust to avoid browser caching old responses
+    script.src = p.api + '?callback=hotlist&t=' + (++_scriptCounter) + '_' + Date.now();
+    document.head.appendChild(script);
   });
 }
 
@@ -132,16 +137,12 @@ function renderTabs() {
   var tabs = tabsEl.querySelectorAll('.tab');
   for (var j = 0; j < tabs.length; j++) {
     tabs[j].addEventListener('click', function() {
-      switchTab(this.getAttribute('data-id'));
+      currentPlatform = this.getAttribute('data-id');
+      renderTabs();
+      renderList();
+      scrollToTop();
     });
   }
-}
-
-function switchTab(id) {
-  currentPlatform = id;
-  renderTabs();
-  renderList();
-  scrollToTop();
 }
 
 function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -168,8 +169,7 @@ function renderList() {
     var rank = i + 1;
     var rankCls = rank === 1 ? 'rank top1' : rank === 2 ? 'rank top2' : rank === 3 ? 'rank top3' : 'rank other';
     var hotSvg = rank <= 3 ? '<svg class="hot-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2C10.5 6 7 8 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-4-3.5-6-5-10z" fill="#ff4757"/></svg>' : '';
-    var searchUrl = 'https://www.baidu.com/s?wd=' + encodeURIComponent(item.title);
-    var link = item.url || searchUrl;
+    var link = item.url || ('https://www.baidu.com/s?wd=' + encodeURIComponent(item.title));
     html += '<div class="item" data-url="' + link + '">' +
       '<div class="' + rankCls + '">' + rank + '</div>' +
       hotSvg +
@@ -188,38 +188,24 @@ function renderList() {
   }
 }
 
-function loadAll() {
+async function loadAll() {
   showLoading();
-  var loaded = 0;
-  var done = false;
-  var pending = PLATFORMS.length;
-
-  function checkDone() {
-    if (done) return;
-    loaded++;
-    if (loaded >= pending) {
-      done = true;
-      renderList();
-      var now = new Date();
-      var t = ('0'+now.getHours()).slice(-2) + ':' + ('0'+now.getMinutes()).slice(-2);
-      document.getElementById('updateTime').textContent = 'Updated ' + t;
-    }
-  }
-
+  // Load all platforms in parallel using Promise.all
+  var promises = PLATFORMS.map(function(p) {
+    return loadAPI(p.id);
+  });
+  var results = await Promise.all(promises);
   for (var i = 0; i < PLATFORMS.length; i++) {
-    (function(p) {
-      loadAPI(p.id, function(items) {
-        dataCache[p.id] = items;
-        checkDone();
-      });
-    })(PLATFORMS[i]);
+    dataCache[PLATFORMS[i].id] = results[i] || [];
   }
+  renderList();
+  var now = new Date();
+  document.getElementById('updateTime').textContent =
+    'Updated ' + ('0'+now.getHours()).slice(-2) + ':' + ('0'+now.getMinutes()).slice(-2);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('refreshBtn').addEventListener('click', loadAll);
-  document.getElementById('fabBtn').addEventListener('click', scrollToTop);
-});
+document.getElementById('refreshBtn').addEventListener('click', loadAll);
+document.getElementById('fabBtn').addEventListener('click', scrollToTop);
 
 window.addEventListener('scroll', function() {
   document.getElementById('fab').classList.toggle('hide', window.scrollY < 300);
