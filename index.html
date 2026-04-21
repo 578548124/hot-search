@@ -605,6 +605,74 @@
       list-style: none;
     }
 
+    /* 抖音风格卡片 */
+    .douyin-card {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16161d 100%);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    body.light-mode .douyin-card {
+      background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    }
+
+    .douyin-thumbnail {
+      position: relative;
+      height: 180px;
+      background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .douyin-play-icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: #fff;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .douyin-shader {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 100%);
+    }
+
+    .douyin-info {
+      padding: 16px;
+    }
+
+    .douyin-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    body.light-mode .douyin-title {
+      color: #333;
+    }
+
+    .douyin-subtitle {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    body.light-mode .douyin-subtitle {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
     .modal-summary li {
       position: relative;
       padding: 14px 16px;
@@ -1117,7 +1185,7 @@
         // 清洗标题
         var cleanTitle = cleanText(item.title);
 
-        html += '<div class="item" data-url="' + escHtml(item.url) + '" data-rank="' + rank + '">' +
+        html += '<div class="item" data-url="' + escHtml(item.url) + '" data-rank="' + rank + '" data-title="' + escHtml(cleanTitle) + '">' +
           '<div class="' + rankCls + '">' + rank + '</div>' +
           '<div class="content">' +
             '<div class="title">' + escHtml(cleanTitle) + '</div>' +
@@ -1137,8 +1205,9 @@
         itemEls[k].addEventListener('click', function() {
           var url = this.getAttribute('data-url');
           var rank = parseInt(this.getAttribute('data-rank')) || 0;
+          var title = this.getAttribute('data-title') || '';
           if (url) {
-            openSummary(url, rank);
+            openSummary(url, rank, title);
           }
         });
       }
@@ -1235,7 +1304,7 @@
        ============================================ */
 
     // 打开摘要模态框
-    function openSummary(url, rank) {
+    function openSummary(url, rank, title) {
       currentSummaryUrl = url;
       currentItemRank = rank;
 
@@ -1266,7 +1335,7 @@
 
       // 如果是抖音链接，直接尝试打开App
       if (isDouyinUrl(url)) {
-        openInDouyinApp(url);
+        openInDouyinApp(url, title);
         return;
       }
 
@@ -1280,25 +1349,43 @@
     }
 
     // 直接打开抖音App
-    function openInDouyinApp(url) {
+    function openInDouyinApp(url, title) {
       // 抖音Scheme协议
-      var schemeUrl = 'snssdk1128://search?keyword=' + encodeURIComponent(extractKeywordFromUrl(url));
+      var keyword = extractKeywordFromUrl(url);
+      var schemeUrl = 'snssdk1128://search?keyword=' + encodeURIComponent(keyword);
 
-      // 显示提示
+      // 隐藏其他元素，显示抖音卡片
       document.getElementById('modalLoading').classList.add('hide');
-      document.getElementById('modalTitle').textContent = '🎵 抖音热搜';
-      document.getElementById('modalDesc').textContent = '点击下方按钮在抖音App中打开';
+      document.getElementById('modalError').classList.add('hide');
+      document.getElementById('modalSummarySection').classList.add('hide');
+      document.getElementById('modalKeywordsSection').classList.add('hide');
+
+      // 创建抖音风格卡片
+      var cardHtml =
+        '<div class="douyin-card">' +
+          '<div class="douyin-thumbnail">' +
+            '<div class="douyin-play-icon">▶</div>' +
+            '<div class="douyin-shader"></div>' +
+          '</div>' +
+          '<div class="douyin-info">' +
+            '<div class="douyin-title">' + escHtml(title || keyword) + '</div>' +
+            '<div class="douyin-subtitle">在抖音中播放</div>' +
+          '</div>' +
+        '</div>';
+
+      document.getElementById('modalSummarySection').innerHTML = cardHtml;
+      document.getElementById('modalSummarySection').classList.remove('hide');
+
+      // 显示操作按钮
       document.getElementById('modalActions').classList.remove('hide');
       document.getElementById('modalSourceUrl').classList.remove('hide');
       document.getElementById('modalSourceUrl').textContent = url;
 
-      // 更新按钮文字和功能
+      // 更新按钮
       var primaryBtn = document.querySelector('.modal-btn-primary');
       primaryBtn.textContent = '📱 打开抖音App';
       primaryBtn.onclick = function() {
-        // 尝试打开抖音App
         window.location.href = schemeUrl;
-        // 备用：3秒后用浏览器打开
         setTimeout(function() {
           window.open(url, '_blank');
         }, 3000);
