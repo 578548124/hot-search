@@ -944,6 +944,9 @@
     // 热搜数据缓存
     var dataCache = {};
 
+    // 预加载状态
+    var preloadStatus = {};
+
     // 当前正在查看的摘要链接和排名
     var currentSummaryUrl = '';
     var currentItemRank = 0;
@@ -1052,7 +1055,19 @@
       currentPlatform = id;
       renderTabs();
       renderList();
-      scrollToTop()
+      scrollToTop();
+
+      // 如果该平台还没加载，后台加载
+      if (!dataCache[id] || dataCache[id].length === 0) {
+        (async function() {
+          dataCache[id] = await loadAPI(id);
+          preloadStatus[id] = 'loaded';
+          if (currentPlatform === id) {
+            renderList();
+          }
+          updatePreloadIndicator();
+        })();
+      }
     }
 
     function scrollToTop() {
@@ -1164,16 +1179,54 @@
 
     // 一次性加载所有平台的数据
     async function loadAll() {
-      showLoading();
-
-      // 依次加载每个平台的数据
-      for (var i = 0; i < PLATFORMS.length; i++) {
-        var p = PLATFORMS[i];
-        dataCache[p.id] = await loadAPI(p.id);
+      // 先尝试显示缓存数据（快速响应）
+      var cachedData = dataCache[currentPlatform];
+      if (cachedData && cachedData.length > 0) {
+        renderList();
+      } else {
+        showLoading();
       }
 
-      // 渲染当前平台的列表
+      // 立即加载当前平台（优先）
+      dataCache[currentPlatform] = await loadAPI(currentPlatform);
+      preloadStatus[currentPlatform] = 'loaded';
       renderList();
+      updatePreloadIndicator();
+
+      // 预加载其他平台（在后台）
+      preloadOtherPlatforms();
+    }
+
+    // 后台预加载其他平台
+    async function preloadOtherPlatforms() {
+      for (var i = 0; i < PLATFORMS.length; i++) {
+        var p = PLATFORMS[i];
+        if (p.id !== currentPlatform && !dataCache[p.id]) {
+          preloadStatus[p.id] = 'loading';
+          updatePreloadIndicator();
+          dataCache[p.id] = await loadAPI(p.id);
+          preloadStatus[p.id] = 'loaded';
+          updatePreloadIndicator();
+        }
+      }
+    }
+
+    // 更新预加载状态指示器
+    function updatePreloadIndicator() {
+      var tabsEl = document.getElementById('tabs');
+      var tabs = tabsEl.querySelectorAll('.tab');
+      for (var i = 0; i < PLATFORMS.length; i++) {
+        var p = PLATFORMS[i];
+        var status = preloadStatus[p.id];
+        var tab = tabs[i];
+        if (tab) {
+          if (status === 'loading') {
+            tab.innerHTML = p.icon + ' ' + p.name + ' <span style="opacity:0.5">...</span>';
+          } else if (status === 'loaded') {
+            tab.innerHTML = p.icon + ' ' + p.name;
+          }
+        }
+      }
     }
 
     /* ============================================
@@ -1374,10 +1427,20 @@
        ============================================ */
     document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible') {
-        // 页面从后台切回来时，自动刷新数据
-        loadAll();
+        // 页面从后台切回来时，后台静默刷新数据
+        silentRefresh();
       }
     });
+
+    // 后台静默刷新（不显示loading）
+    async function silentRefresh() {
+      // 刷新当前平台
+      dataCache[currentPlatform] = await loadAPI(currentPlatform);
+      renderList();
+
+      // 预加载其他平台
+      preloadOtherPlatforms();
+    }
   </script>
 </body>
 </html>
