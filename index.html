@@ -180,9 +180,6 @@ document.getElementById('readerPage').addEventListener('touchend', function(e){
   if (d > 80 && e.changedTouches[0].clientY < 300) closeReader();
 }, {passive:true});
 
-// 旧的 extractArticle 和 renderArticle（保留但不再使用）
-function extractArticle(html) {
-
 var FALLBACK_DATA = {
   all:[
     {title:'70年产权的房子，实际能住多少年？',source:'知乎',hot:'18497',url:'https://www.zhihu.com/question/2018272205939721140'},
@@ -199,112 +196,6 @@ var dataCache = {};
 function e(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// 提取文章内容 + 生成摘要
-function extractArticle(html) {
-  try {
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(html, 'text/html');
-
-    // 移除干扰
-    ['script','style','noscript','iframe','svg','nav','header','footer','aside',
-     'form','.sidebar','.share','.social','.toolbar','.navbar',
-     '.comment','.advertisement','.ad','.fixed','.sticky','.popup','.modal',
-     '.weixin-qrcode','.qrcode','.author-info','.article-actions',
-     '[role="navigation"]','[role="banner"]'
-    ].forEach(function(sel) {
-      try { doc.querySelectorAll(sel).forEach(function(el){ el.remove(); }); } catch(ex){}
-    });
-
-    // 标题
-    var title = '';
-    ['h1','.article-title','.post-title','#article-title','article h2','.entry-title'
-    ].forEach(function(sel) {
-      var el = doc.querySelector(sel);
-      if (el && el.textContent.trim().length > 5 && el.textContent.trim().length < 300) {
-        title = el.textContent.trim(); return;
-      }
-    });
-    if (!title) {
-      var t = doc.querySelector('title');
-      if (t) title = t.textContent.replace(/_.*$/,'').trim();
-    }
-
-    // Meta
-    var metaAuthor = '', metaDate = '', metaDesc = '';
-    var authorEl = doc.querySelector('meta[name="author"]') || doc.querySelector('[class*="author"]');
-    if (authorEl) metaAuthor = (authorEl.getAttribute('content') || authorEl.textContent || '').trim().substring(0,50);
-    var dateEl = doc.querySelector('meta[property="article:published_time"]') || doc.querySelector('time');
-    if (dateEl) metaDate = (dateEl.getAttribute('content') || dateEl.getAttribute('datetime') || dateEl.textContent || '').trim().substring(0,10);
-    var descEl = doc.querySelector('meta[name="description"]');
-    if (descEl) metaDesc = (descEl.getAttribute('content') || '').trim().substring(0,200);
-
-    // 正文区域
-    var contentEl = doc.querySelector('article') || doc.querySelector('main') ||
-      doc.querySelector('.article-content') || doc.querySelector('.post-content') ||
-      doc.querySelector('#content') || doc.querySelector('.content') ||
-      doc.querySelector('.news-content') || doc.body;
-
-    var allSents = [];
-    contentEl.querySelectorAll('p,h2,h3,h4,li').forEach(function(el) {
-      var text = el.textContent.trim().replace(/\s+/g,' ');
-      if (text.length < 15) return;
-      var skip = ['登录','注册','收藏','评论','分享','上一篇','下一篇','相关推荐','相关阅读','Copyright','关键词'];
-      if (skip.some(function(w){ return text.startsWith(w); })) return;
-      var sentences = text.split(/[。！？.?!；]/).filter(function(s){ return s.trim().length > 8; });
-      sentences.forEach(function(s) {
-        s = s.trim();
-        if (s.length < 5) return;
-        allSents.push(s);
-      });
-    });
-
-    // 去重
-    var seen = {};
-    allSents = allSents.filter(function(s) {
-      var key = s.substring(0,10);
-      if (seen[key]) return false;
-      seen[key] = true;
-      return true;
-    });
-
-    // 提取关键词
-    var kwSet = {};
-    var words = title.match(/[\u4e00-\u9fa5]{2,4}/g) || [];
-    allSents.slice(0,3).forEach(function(s) {
-      (s.match(/[\u4e00-\u9fa5]{2,4}/g) || []).forEach(function(w){ kwSet[w] = (kwSet[w]||0)+1; });
-    });
-    var keywords = Object.keys(kwSet).sort(function(a,b){ return kwSet[b]-kwSet[a]; }).slice(0,6);
-
-    // 摘要：取前半段最有信息量的句子
-    var halfIdx = Math.ceil(allSents.length * 0.4);
-    var introSents = allSents.slice(0, halfIdx);
-    introSents.forEach(function(s) {
-      s._score = s.length;
-      if (s.match(/\d{4,}/)) s._score += 8;
-      if (s.match(/中国|美国|政府|政策|研究|发布|表示|发现|世界|全球|首次/)) s._score += 6;
-      if (s.length > 30) s._score += 3;
-    });
-    introSents.sort(function(a,b){ return b._score - a._score; });
-    var summary = introSents.slice(0,6).map(function(s){ return s.substring(0,250) + (s.length > 250 ? '…' : ''); });
-
-    // 原始正文（前8段）
-    var rawParagraphs = allSents.slice(0, 12).map(function(s){ return s.substring(0,300) + (s.length > 300 ? '…' : ''); });
-
-    return {
-      title: title.substring(0,200),
-      author: metaAuthor,
-      date: metaDate,
-      desc: metaDesc,
-      summary: summary,
-      keywords: keywords,
-      rawParagraphs: rawParagraphs,
-      total: allSents.length
-    };
-  } catch(ex) {
-    return null;
-  }
 }
 
 // 热榜加载

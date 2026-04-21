@@ -206,6 +206,22 @@ export default {
       });
     }
 
+    // 文章摘要：GET /summary?url=https://...
+    if (pathname === '/summary') {
+      const targetUrl = url.searchParams.get('url');
+      if (!targetUrl || !targetUrl.startsWith('http')) {
+        return jsonResponse({ error: 'Missing or invalid url parameter' }, 400);
+      }
+      try {
+        const resp = await fetchWithTimeout(targetUrl, {}, 15000);
+        const html = await resp.text();
+        const summary = extractSummary(html, targetUrl);
+        return jsonResponse({ code: 1, url: targetUrl, ...summary });
+      } catch (err) {
+        return jsonResponse({ code: 0, error: err.message }, 502);
+      }
+    }
+
     // 文章代理：GET /proxy?url=https://...
     if (pathname === '/proxy') {
       const targetUrl = url.searchParams.get('url');
