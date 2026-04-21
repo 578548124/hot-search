@@ -1349,9 +1349,7 @@
 
     // 直接打开抖音App
     function openInDouyinApp(url, title) {
-      // 抖音Scheme协议
       var keyword = extractKeywordFromUrl(url);
-      var schemeUrl = 'snssdk1128://search?keyword=' + encodeURIComponent(keyword);
 
       // 隐藏其他元素，显示抖音卡片
       document.getElementById('modalLoading').classList.add('hide');
@@ -1368,7 +1366,7 @@
           '</div>' +
           '<div class="douyin-info">' +
             '<div class="douyin-title">' + escHtml(title || keyword) + '</div>' +
-            '<div class="douyin-subtitle">在抖音中播放</div>' +
+            '<div class="douyin-subtitle">点击下方按钮在浏览器打开</div>' +
           '</div>' +
         '</div>';
 
@@ -1380,14 +1378,11 @@
       document.getElementById('modalSourceUrl').classList.remove('hide');
       document.getElementById('modalSourceUrl').textContent = url;
 
-      // 更新按钮
+      // 更新按钮 - 直接用浏览器打开
       var primaryBtn = document.querySelector('.modal-btn-primary');
-      primaryBtn.textContent = '📱 打开抖音App';
+      primaryBtn.textContent = '🌐 在浏览器打开';
       primaryBtn.onclick = function() {
-        window.location.href = schemeUrl;
-        setTimeout(function() {
-          window.open(url, '_blank');
-        }, 3000);
+        window.open(url, '_blank');
       };
     }
 
