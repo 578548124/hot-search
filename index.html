@@ -1328,6 +1328,10 @@
 
       // 如果是抖音链接，直接尝试打开App
       if (isDouyinUrl(url)) {
+        // 立即设置标题，避免闪烁
+        document.getElementById('modalPlatform').textContent = platformName;
+        document.getElementById('modalRank').textContent = '第' + rank + '名';
+        document.getElementById('modalTitle').textContent = '🎵 抖音热搜';
         openInDouyinApp(url, title);
         return;
       }
