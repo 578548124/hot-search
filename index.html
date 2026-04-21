@@ -1326,17 +1326,17 @@
       document.getElementById('modalActions').classList.add('hide');
       document.getElementById('modalSourceUrl').classList.add('hide');
 
-      // 设置平台和排名
-      document.getElementById('modalPlatform').textContent = platformName;
-      document.getElementById('modalRank').textContent = '第' + rank + '名';
-      document.getElementById('modalTitle').textContent = '加载中...';
-      document.getElementById('modalDesc').textContent = '';
-
       // 如果是抖音链接，直接尝试打开App
       if (isDouyinUrl(url)) {
         openInDouyinApp(url, title);
         return;
       }
+
+      // 设置平台和排名
+      document.getElementById('modalPlatform').textContent = platformName;
+      document.getElementById('modalRank').textContent = '第' + rank + '名';
+      document.getElementById('modalTitle').textContent = '加载中...';
+      document.getElementById('modalDesc').textContent = '';
 
       // 获取摘要
       loadSummary(url);
