@@ -3,278 +3,1381 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#1e3a5f">
-  <title>Hot Search</title>
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="description" content="热搜聚合 - 热点资讯一触即达">
+  <title>热搜聚合</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F525;</text></svg>">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;background:#0d1b2a;color:#e0e6ed;min-height:100vh}
-    header{background:linear-gradient(135deg,#1e3a5f,#2d5a87);padding:16px 20px 12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.3)}
-    .header-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-    .tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:0 20px}
-    .tabs::-webkit-scrollbar{display:none}
-    .tab{padding:7px 14px;border-radius:20px;font-size:14px;font-weight:500;white-space:nowrap;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);border:1px solid transparent;flex-shrink:0}
-    .tab.active{background:rgba(255,255,255,0.22);color:#fff;border-color:rgba(255,255,255,0.3)}
-    .refresh-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;font-size:12px;color:rgba(255,255,255,0.4);background:#0d1b2a}
-    .refresh-btn{background:none;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);padding:4px 12px;border-radius:12px;font-size:12px;cursor:pointer}
-    .list{padding:8px 16px 80px}
-    .item{display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer}
-    .item:active{background:rgba(255,255,255,0.05);border-radius:8px;margin:0 -8px;padding:13px 8px}
-    .rank{min-width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin-top:1px;flex-shrink:0}
-    .rank.top1{background:#ff4757;color:#fff}
-    .rank.top2{background:#ff6b35;color:#fff}
-    .rank.top3{background:#ffa502;color:#fff}
-    .rank.other{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5)}
-    .content{flex:1;min-width:0}
-    .title{font-size:15px;font-weight:500;color:#e8edf4;line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}
-    .source-tag{font-size:11px;color:rgba(255,255,255,0.45);margin-top:4px}
-    .loading{text-align:center;padding:60px 0;color:rgba(255,255,255,0.4);font-size:14px}
-    .spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:#2d5a87;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .error-msg{text-align:center;padding:40px 20px;color:rgba(255,255,255,0.4);font-size:14px;line-height:1.8}
-    /* 阅读器 */
-    .reader-page{position:fixed;top:0;left:0;right:0;bottom:0;background:#f5f3ef;color:#222;z-index:200;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)}
-    .reader-page.open{transform:translateX(0)}
-    .reader-header{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #e0ddd8;background:#fff;position:sticky;top:0;z-index:10;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
-    .back-btn{background:none;border:none;color:#2d5a87;cursor:pointer;padding:6px 10px;border-radius:20px;font-size:15px;white-space:nowrap;flex-shrink:0;font-weight:500}
-    .back-btn:active{background:#f0f0f0}
-    .reader-source{font-size:12px;color:#999;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .open-original{background:none;border:1px solid #ddd;color:#666;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-weight:500}
-    .reader-body{flex:1;overflow-y:auto;padding:0}
-    .reader-card{background:#fff;margin:16px;border-radius:16px;padding:24px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
-    .reader-title{font-size:22px;font-weight:700;color:#111;line-height:1.6;margin-bottom:10px}
-    .reader-meta{font-size:12px;color:#999;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #f0f0f0}
-    .summary-label{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#2d5a87;background:#e8f0fb;padding:3px 10px;border-radius:12px;margin-bottom:12px}
-    .summary-points{list-style:none}
-    .summary-points li{position:relative;padding-left:16px;margin-bottom:10px;font-size:15px;color:#333;line-height:1.7}
-    .summary-points li::before{content:'•';position:absolute;left:0;color:#2d5a87;font-weight:700;font-size:18px;top:1px}
-    .keyword-tag{font-size:11px;background:#f0f4f8;color:#555;padding:2px 8px;border-radius:10px;margin-right:4px;margin-bottom:4px;display:inline-block}
-    .raw-label{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#888;background:#f5f5f5;padding:3px 10px;border-radius:12px;margin-bottom:14px}
-    .raw-text{font-size:15px;line-height:1.9;color:#444}
-    .raw-text p{margin-bottom:12px}
-    .reader-loading{text-align:center;padding:60px 20px;color:#999}
-    .reader-loading-spinner{width:36px;height:36px;border:3px solid #eee;border-top-color:#2d5a87;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
-    .reader-error{text-align:center;padding:60px 20px;color:#999}
-    .reader-error .hint{font-size:13px;margin-top:10px;color:#bbb;line-height:1.8}
-    .reader-error .hint a{color:#2d5a87}
-    .ext-btn{background:#2d5a87;color:#fff;border:none;padding:10px 24px;border-radius:20px;font-size:14px;cursor:pointer;margin-top:16px;font-weight:500}
+    /* ============================================
+       基础样式重置
+       ============================================ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ============================================
+       页面主体样式 - 渐变暗色背景
+       ============================================ */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #e8e8e8;
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ============================================
+       白天模式样式
+       ============================================ */
+    body.light-mode {
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 50%, #d0d4da 100%);
+      color: #333333;
+    }
+
+    /* ============================================
+       顶部导航栏 - 玻璃拟态风格
+       ============================================ */
+    header {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 20px 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    body.light-mode header {
+      background: rgba(255, 255, 255, 0.9);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    /* 标题区域 */
+    .header-title {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.5px;
+    }
+
+    /* 头部工具栏 */
+    .header-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+
+    /* 主题切换按钮 */
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s;
+    }
+
+    body.light-mode .theme-toggle {
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      color: #666;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1);
+    }
+
+    .theme-toggle:active {
+      transform: scale(0.95);
+    }
+
+    /* ============================================
+       平台切换标签栏 - 胶囊式设计
+       ============================================ */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* 单个标签样式 */
+    .tab {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    body.light-mode .tab {
+      background: rgba(0, 0, 0, 0.05);
+      color: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    /* 悬停效果 */
+    .tab:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    body.light-mode .tab:hover {
+      background: rgba(0, 0, 0, 0.1);
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    /* 选中状态 - 渐变背景 */
+    .tab.active {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.35);
+    }
+
+    /* ============================================
+       热搜列表区域
+       ============================================ */
+    .list {
+      padding: 16px 16px 100px;
+    }
+
+    /* 单个热搜条目 - 卡片式设计 */
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.light-mode .item {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* 点击时的反馈效果 */
+    .item:hover {
+      background: rgba(255, 255, 255, 0.09);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    body.light-mode .item:hover {
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .item:active {
+      transform: scale(0.98);
+    }
+
+    /* 排名数字 */
+    .rank {
+      min-width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* 前三名不同渐变背景 */
+    .rank.top1 {
+      background: linear-gradient(135deg, #ff4757, #ff6b81);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+    }
+    .rank.top2 {
+      background: linear-gradient(135deg, #ffa502, #ffbe76);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(255, 165, 2, 0.4);
+    }
+    .rank.top3 {
+      background: linear-gradient(135deg, #7bed9f, #70a1ff);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(123, 237, 159, 0.4);
+    }
+    .rank.other {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    body.light-mode .rank.other {
+      background: rgba(0, 0, 0, 0.08);
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* 内容区域 */
+    .content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* 热搜标题 */
+    .title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f1f1f1;
+      line-height: 1.5;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    body.light-mode .title {
+      color: #333333;
+    }
+
+    /* 热搜元信息 */
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    /* 来源标签 */
+    .source-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      background: rgba(255, 107, 107, 0.15);
+      color: #ff6b6b;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    body.light-mode .source-tag {
+      background: rgba(255, 107, 107, 0.15);
+    }
+
+    /* 热度值 */
+    .hot-value {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    body.light-mode .hot-value {
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    /* 火焰图标（前三热点） */
+    .hot-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+
+    /* ============================================
+       加载中样式
+       ============================================ */
+    .loading {
+      text-align: center;
+      padding: 80px 0;
+    }
+
+    .loading-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.7; }
+    }
+
+    .loading-text {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+    }
+
+    body.light-mode .loading-text {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    .error-msg {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 14px;
+    }
+
+    body.light-mode .error-msg {
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    .error-msg .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* ============================================
+       返回顶部按钮
+       ============================================ */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 50px;
+      height: 50px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: #fff;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .fab.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .fab:active {
+      transform: scale(0.95);
+    }
+
+    /* ============================================
+       安装提示横幅
+       ============================================ */
+    .install-banner {
+      background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9));
+      backdrop-filter: blur(10px);
+      color: #fff;
+      padding: 14px 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .install-banner span {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .install-btn {
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    .install-btn:active {
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .hide {
+      display: none !important;
+    }
+
+    /* ============================================
+       摘要模态框 - 全屏沉浸式卡片
+       ============================================ */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 20, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* 摘要卡片本体 */
+    .modal-card {
+      background: linear-gradient(180deg, #1e1e3f 0%, #252550 100%);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s;
+    }
+
+    body.light-mode .modal-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f5f5f5 100%);
+    }
+
+    .modal-overlay.show .modal-card {
+      transform: translateY(0);
+    }
+
+    /* 卡片顶部装饰条 */
+    .modal-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-drag-handle {
+      width: 40px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+
+    body.light-mode .modal-drag-handle {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    /* 卡片头部区域 */
+    .modal-header {
+      padding: 0 24px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    body.light-mode .modal-header {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    /* 模态框内顶部：平台 + 热度 */
+    .modal-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .modal-platform-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 12px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: #fff;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .modal-rank-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    body.light-mode .modal-rank-badge {
+      background: rgba(0, 0, 0, 0.08);
+      color: rgba(0, 0, 0, 0.7);
+    }
+
+    /* 摘要标题 */
+    .modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.5;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    body.light-mode .modal-title {
+      color: #333333;
+    }
+
+    /* 摘要描述 */
+    .modal-desc {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.7;
+    }
+
+    body.light-mode .modal-desc {
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    /* 摘要内容区域 */
+    .modal-body {
+      padding: 24px;
+    }
+
+    /* 关键信息标题 */
+    .modal-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    body.light-mode .modal-section-title {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    body.light-mode .modal-section-title::after {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* 关键信息列表 */
+    .modal-summary {
+      list-style: none;
+    }
+
+    .modal-summary li {
+      position: relative;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.7;
+      border-left: 3px solid;
+      border-image: linear-gradient(180deg, #ff6b6b, #ffd93d) 1;
+    }
+
+    body.light-mode .modal-summary li {
+      background: rgba(0, 0, 0, 0.03);
+      color: rgba(0, 0, 0, 0.85);
+    }
+
+    /* 关键词标签区域 */
+    .modal-keywords-section {
+      margin-top: 24px;
+    }
+
+    .modal-keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .keyword-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 14px;
+      background: rgba(255, 107, 107, 0.15);
+      border: 1px solid rgba(255, 107, 107, 0.2);
+      color: #ff8787;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    body.light-mode .keyword-tag {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.15);
+      color: #ee5a24;
+    }
+
+    /* 操作按钮区域 */
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    body.light-mode .modal-actions {
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      border: none;
+      transition: all 0.25s;
+    }
+
+    .modal-btn-primary {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.35);
+    }
+
+    .modal-btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    body.light-mode .modal-btn-secondary {
+      background: rgba(0, 0, 0, 0.05);
+      color: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* 关闭按钮 */
+    .modal-close {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 210;
+      transition: all 0.2s;
+    }
+
+    body.light-mode .modal-close {
+      background: rgba(0, 0, 0, 0.1);
+      color: rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-close:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 加载摘要时的显示 */
+    .modal-loading {
+      text-align: center;
+      padding: 60px 0;
+    }
+
+    .modal-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #ff6b6b;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .modal-loading-text {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+    }
+
+    body.light-mode .modal-loading-text {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* 摘要获取失败提示 */
+    .modal-error {
+      text-align: center;
+      padding: 60px 0;
+    }
+
+    .modal-error-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .modal-error-text {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    body.light-mode .modal-error-text {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+
+    body.light-mode .modal-retry-btn {
+      background: rgba(0, 0, 0, 0.05);
+      color: rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-retry-btn:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* 原始链接展示 */
+    .modal-source-url {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.3);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    body.light-mode .modal-source-url {
+      background: rgba(0, 0, 0, 0.03);
+      color: rgba(0, 0, 0, 0.3);
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="header-title"><span>🔥</span><span>热榜</span></div>
-  <div class="tabs" id="tabs"></div>
-</header>
-
-<div class="refresh-bar">
-  <span id="updateTime">--</span>
-  <span id="platformCount" style="font-size:12px"></span>
-  <button class="refresh-btn" id="refreshBtn">🔄 刷新</button>
-</div>
-
-<div id="list" class="list"></div>
-
-<div id="readerPage" class="reader-page">
-  <div class="reader-header">
-    <button class="back-btn" id="backBtn">← 返回</button>
-    <span class="reader-source" id="readerSource"></span>
-    <button class="open-original" id="openOriginal">浏览器</button>
+  <!-- 安装到桌面提示横幅 -->
+  <div id="installBanner" class="install-banner hide">
+    <span>👆 点击安装到手机桌面，体验原生体验</span>
+    <button class="install-btn" id="installBtn">安装App</button>
   </div>
-  <div class="reader-body" id="readerBody">
-    <div class="reader-loading"><div class="reader-loading-spinner"></div>正在获取文章内容...</div>
+
+  <!-- 顶部导航栏 -->
+  <header>
+    <!-- 头部工具栏 -->
+    <div class="header-toolbar">
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="header-title">
+      <span>🔥</span>
+      <span>热搜聚合</span>
+    </div>
+    <!-- 平台切换标签 -->
+    <div class="tabs" id="tabs"></div>
+  </header>
+
+  <!-- 热搜列表区域 -->
+  <div id="list" class="list"></div>
+
+  <!-- 返回顶部浮动按钮 -->
+  <div id="fab" class="fab" onclick="scrollToTop()">↑</div>
+
+  <!-- 关闭按钮（模态框打开时显示） -->
+  <button id="modalCloseBtn" class="modal-close hide" onclick="closeModal()">✕</button>
+
+  <!-- ============================================
+       摘要模态框
+       ============================================ -->
+  <div id="modalOverlay" class="modal-overlay" onclick="handleModalOverlayClick(event)">
+    <div class="modal-card">
+      <!-- 拖动条 -->
+      <div class="modal-top-bar">
+        <div class="modal-drag-handle"></div>
+      </div>
+
+      <!-- 卡片头部 -->
+      <div class="modal-header">
+        <div class="modal-meta">
+          <span id="modalPlatform" class="modal-platform-badge">百度</span>
+          <span id="modalRank" class="modal-rank-badge">第1名</span>
+        </div>
+        <div id="modalTitle" class="modal-title">加载中...</div>
+        <div id="modalDesc" class="modal-desc"></div>
+      </div>
+
+      <!-- 卡片内容 -->
+      <div class="modal-body">
+        <!-- 加载中状态 -->
+        <div id="modalLoading" class="modal-loading">
+          <div class="modal-spinner"></div>
+          <div class="modal-loading-text">正在获取摘要信息...</div>
+        </div>
+
+        <!-- 错误状态 -->
+        <div id="modalError" class="modal-error hide">
+          <div class="modal-error-icon">😢</div>
+          <div class="modal-error-text">暂无法获取摘要内容</div>
+          <button class="modal-retry-btn" onclick="retrySummary()">
+            🔄 重试
+          </button>
+        </div>
+
+        <!-- 关键信息 -->
+        <div id="modalSummarySection" class="hide">
+          <div class="modal-section-title">📌 关键信息</div>
+          <ul id="modalSummaryList" class="modal-summary"></ul>
+        </div>
+
+        <!-- 关键词 -->
+        <div id="modalKeywordsSection" class="modal-keywords-section hide">
+          <div class="modal-section-title">🏷️ 相关话题</div>
+          <div id="modalKeywords" class="modal-keywords"></div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div id="modalActions" class="modal-actions hide">
+          <button class="modal-btn modal-btn-secondary" onclick="closeModal()">
+            返回列表
+          </button>
+          <button class="modal-btn modal-btn-primary" onclick="openInBrowser()">
+            🌐 在浏览器打开
+          </button>
+        </div>
+
+        <!-- 原始链接 -->
+        <div id="modalSourceUrl" class="modal-source-url hide"></div>
+      </div>
+    </div>
   </div>
-</div>
 
-<script>
-var WORKER_URL = 'https://hotsearch-worker.haiyun954123.workers.dev';
+  <script>
+    /* ============================================
+       配置区域
+       ============================================ */
 
-var PLATFORMS = [
-  {id:'all',name:'全站'},
-  {id:'baidu',name:'百度'},
-  {id:'weibo',name:'微博'},
-  {id:'zhihu',name:'知乎'},
-  {id:'weixin',name:'微信'},
-  {id:'thepaper',name:'澎湃'},
-  {id:'huxiu',name:'虎嗅'},
-  {id:'ithome',name:'IT之家'},
-];
+    // 支持的平台列表（已删除 ithome 和 huxiu）
+    var PLATFORMS = [
+      { id: 'baidu',    name: '百度',   icon: '🔍' },
+      { id: 'weibo',    name: '微博',   icon: '📰' },
+      { id: 'zhihu',    name: '知乎',   icon: '💬' },
+      { id: 'weixin',   name: '微信',   icon: '💚' },
+      { id: 'thepaper', name: '澎湃',   icon: '📰' },
+      { id: 'all',      name: '全部',   icon: '🔥' },
+    ];
 
-// Worker 端摘要端点
-function loadSummary(url) {
-  return new Promise(function(resolve) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', WORKER_URL + '/summary?url=' + encodeURIComponent(url), true);
-    xhr.timeout = 20000;
-    xhr.onload = function() {
-      if (xhr.status === 200 && xhr.responseText) {
-        try {
-          var d = JSON.parse(xhr.responseText);
-          if (d.code === 1) { resolve(d); return; }
-        } catch(e){}
-      }
-      resolve(null);
-    };
-    xhr.onerror = function() { resolve(null); };
-    xhr.ontimeout = function() { resolve(null); };
-    xhr.send();
-  });
-}
+    // API 后端地址
+    var API_BASE = 'https://hotsearch-worker.haiyun954123.workers.dev';
 
-// 渲染摘要阅读器
-function renderReader(title, url, source) {
-  var readerPage = document.getElementById('readerPage');
-  var readerBody = document.getElementById('readerBody');
-  var readerSource = document.getElementById('readerSource');
-  var openOriginal = document.getElementById('openOriginal');
-  readerSource.textContent = source || '';
-  openOriginal.style.display = '';
-  openOriginal.onclick = function() { window.open(url, '_blank'); };
-  readerBody.innerHTML = '<div class="reader-loading"><div class="reader-loading-spinner"></div>正在获取文章摘要...</div>';
-  readerPage.classList.add('open');
-  document.body.style.overflow = '';
+    // 当前选中的平台
+    var currentPlatform = 'baidu';
 
-  loadSummary(url).then(function(data) {
-    if (!data || !data.summary || data.summary.length === 0) {
-      renderErr('暂无法获取摘要', url); return;
-    }
-    var meta = [source || ''];
-    if (data.title) meta.push('来源采集');
-    var html = '<div class="reader-card">';
-    html += '<div class="reader-title">' + e(data.title || title) + '</div>';
-    if (data.desc) html += '<div class="reader-meta" style="font-size:13px;color:#888;margin-bottom:16px;line-height:1.6">' + e(data.desc) + '</div>';
-    html += '<div class="summary-label">📌 关键信息</div>';
-    html += '<ul class="summary-points">';
-    data.summary.forEach(function(p) {
-      html += '<li>' + e(p) + '</li>';
+    // 热搜数据缓存
+    var dataCache = {};
+
+    // 当前正在查看的摘要链接和排名
+    var currentSummaryUrl = '';
+    var currentItemRank = 0;
+
+    // PWA 安装提示的延迟prompt对象
+    var deferredPrompt = null;
+
+    // 主题状态（false = 暗色，true = 亮色）
+    var isLightMode = false;
+
+    /* ============================================
+       初始化
+       ============================================ */
+    document.addEventListener('DOMContentLoaded', function() {
+      // 绑定安装按钮
+      document.getElementById('installBtn').addEventListener('click', installApp);
+      // 初始化主题
+      initTheme();
     });
-    html += '</ul>';
-    if (data.keywords && data.keywords.length > 0) {
-      html += '<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:4px">';
-      data.keywords.forEach(function(kw) {
-        html += '<span class="keyword-tag">' + e(kw) + '</span>';
-      });
-      html += '</div>';
-    }
-    html += '<div style="text-align:center;padding:20px 0"><button class="ext-btn" onclick="window.open(\'' + e(url) + '\',\'_blank\')">🔗 在浏览器中完整阅读</button></div>';
-    html += '</div>';
-    readerBody.innerHTML = html;
-    readerBody.scrollTop = 0;
-  });
-}
 
-function renderErr(msg, url) {
-  readerBody.innerHTML = '<div class="reader-card"><div class="reader-error"><div style="font-size:48px;margin-bottom:12px">📰</div><div style="font-size:15px;color:#666;margin-bottom:8px">' + e(msg) + '</div><div style="font-size:13px;color:#999;margin-bottom:16px">该来源暂不支持摘要生成</div><button class="ext-btn" onclick="window.open(\'' + e(url) + '\',\'_blank\')">🌐 在浏览器打开原文</button></div></div>';
-}
+    // 监听 PWA 安装提示事件
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installBanner').classList.remove('hide');
+    });
 
-function closeReader() {
-  document.getElementById('readerPage').classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.getElementById('backBtn').onclick = closeReader;
-var rStartX = 0;
-document.getElementById('readerPage').addEventListener('touchstart', function(e){ rStartX = e.touches[0].clientX; }, {passive:true});
-document.getElementById('readerPage').addEventListener('touchend', function(e){
-  var d = e.changedTouches[0].clientX - rStartX;
-  if (d > 80 && e.changedTouches[0].clientY < 300) closeReader();
-}, {passive:true});
-
-var FALLBACK_DATA = {
-  all:[
-    {title:'70年产权的房子，实际能住多少年？',source:'知乎',hot:'18497',url:'https://www.zhihu.com/question/2018272205939721140'},
-    {title:'为什么云南泼水节变味了？',source:'知乎',hot:'15941',url:'https://www.zhihu.com/question/652795560'},
-    {title:'DeepSeek V4即将发布并提出「去CUDA化」',source:'知乎',hot:'11324',url:'https://www.zhihu.com/question/2028817450829976782'},
-    {title:'公司服务器淘汰72根DDR4内存被员工捡回：约2.25TB',source:'IT之家',hot:'9171',url:'https://www.ithome.com/0/940/930.htm'},
-    {title:'日本发生7.5级地震',source:'微博',hot:'150万',url:'https://s.weibo.com/weibo?q=%E6%97%A5%E6%9C%AC7.5%E7%BA%A7%E5%9C%B0%E9%9C%87'}
-  ]
-};
-
-var currentPlatform = 'all';
-var dataCache = {};
-
-function e(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// 热榜加载
-function loadAPI(pid) {
-  return new Promise(function(res) {
-    var t = setTimeout(function(){ res(FALLBACK_DATA[pid]||FALLBACK_DATA.all||[]); }, 12000);
-    var x = new XMLHttpRequest();
-    x.open('GET', WORKER_URL + '/api/' + pid, true);
-    x.onload = function() {
-      clearTimeout(t);
-      if (x.status===200 && x.responseText) {
-        try {
-          var d = JSON.parse(x.responseText);
-          if (d.code===1 && d.items && d.items.length>0) { res(d.items); return; }
-        } catch(ex){}
+    /* ============================================
+       主题切换功能
+       ============================================ */
+    function initTheme() {
+      // 从 localStorage 读取保存的主题
+      var savedTheme = localStorage.getItem('hotsearch-theme');
+      if (savedTheme === 'light') {
+        isLightMode = true;
+        document.body.classList.add('light-mode');
+        document.getElementById('themeToggle').textContent = '☀️';
+      } else if (savedTheme === 'dark') {
+        isLightMode = false;
+        document.body.classList.remove('light-mode');
+        document.getElementById('themeToggle').textContent = '🌙';
+      } else {
+        // 没有保存的偏好，使用系统偏好
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          isLightMode = true;
+          document.body.classList.add('light-mode');
+          document.getElementById('themeToggle').textContent = '☀️';
+        } else {
+          isLightMode = false;
+          document.body.classList.remove('light-mode');
+          document.getElementById('themeToggle').textContent = '🌙';
+        }
       }
-      res(FALLBACK_DATA[pid]||FALLBACK_DATA.all||[]);
-    };
-    x.onerror = function(){ clearTimeout(t); res(FALLBACK_DATA[pid]||FALLBACK_DATA.all||[]); };
-    x.send();
-  });
-}
+    }
 
-function renderTabs() {
-  var el = document.getElementById('tabs');
-  el.innerHTML = PLATFORMS.map(function(p) {
-    return '<div class="tab' + (p.id===currentPlatform?' active':'') + '" data-id="' + p.id + '">' + p.name + '</div>';
-  }).join('');
-  el.querySelectorAll('.tab').forEach(function(t) {
-    t.onclick = function() {
-      currentPlatform = this.getAttribute('data-id');
+    function toggleTheme() {
+      isLightMode = !isLightMode;
+      var themeToggle = document.getElementById('themeToggle');
+
+      if (isLightMode) {
+        document.body.classList.add('light-mode');
+        themeToggle.textContent = '☀️';
+        localStorage.setItem('hotsearch-theme', 'light');
+      } else {
+        document.body.classList.remove('light-mode');
+        themeToggle.textContent = '🌙';
+        localStorage.setItem('hotsearch-theme', 'dark');
+      }
+    }
+
+    /* ============================================
+       PWA 安装功能
+       ============================================ */
+    function installApp() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function(result) {
+        deferredPrompt = null;
+        document.getElementById('installBanner').classList.add('hide');
+      });
+    }
+
+    /* ============================================
+       平台切换功能
+       ============================================ */
+    function renderTabs() {
+      var tabsEl = document.getElementById('tabs');
+      var html = '';
+      for (var i = 0; i < PLATFORMS.length; i++) {
+        var p = PLATFORMS[i];
+        var cls = p.id === currentPlatform ? 'tab active' : 'tab';
+        html += '<div class="' + cls + '" data-id="' + p.id + '">' + p.icon + ' ' + p.name + '</div>';
+      }
+      tabsEl.innerHTML = html;
+
+      // 绑定点击事件
+      var tabs = tabsEl.querySelectorAll('.tab');
+      for (var j = 0; j < tabs.length; j++) {
+        tabs[j].addEventListener('click', function() {
+          switchTab(this.getAttribute('data-id'));
+        });
+      }
+    }
+
+    function switchTab(id) {
+      currentPlatform = id;
       renderTabs();
       renderList();
-      window.scrollTo({top:0,behavior:'smooth'});
-    };
-  });
-}
+      scrollToTop()
+    }
 
-function renderList() {
-  var el = document.getElementById('list');
-  var items = dataCache[currentPlatform];
-  if (!items || items.length===0) {
-    el.innerHTML = '<div class="error-msg">暂无数据</div>'; return;
-  }
-  el.innerHTML = items.map(function(item,i) {
-    var r = i+1;
-    var c = r===1?'top1':r===2?'top2':r===3?'top3':'other';
-    return '<div class="item" data-title="'+e(item.title)+'" data-url="'+e(item.url)+'" data-source="'+e(item.source||'')+'">'+
-      '<div class="rank '+c+'">'+r+'</div>'+
-      '<div class="content"><div class="title">'+e(item.title)+'</div>'+
-      '<div class="source-tag">'+e(item.source||'')+(item.hot?' · '+item.hot:'')+'</div></div></div>';
-  }).join('');
-  el.querySelectorAll('.item').forEach(function(el2) {
-    el2.onclick = function() {
-      renderReader(
-        this.getAttribute('data-title'),
-        this.getAttribute('data-url'),
-        this.getAttribute('data-source')
-      );
-    };
-  });
-}
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-async function loadAll() {
-  document.getElementById('list').innerHTML = '<div class="loading"><div class="spinner"></div>加载中...</div>';
-  var items = await loadAPI(currentPlatform);
-  dataCache[currentPlatform] = items;
-  document.getElementById('platformCount').textContent = items.length > 0 ? items.length+'条' : '';
-  renderList();
-  var now = new Date();
-  document.getElementById('updateTime').textContent = '更新 ' + ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
-}
+    /* ============================================
+       加载和渲染热搜列表
+       ============================================ */
+    function showLoading() {
+      document.getElementById('list').innerHTML =
+        '<div class="loading">' +
+          '<div class="loading-icon"></div>' +
+          '<div class="loading-text">正在加载热搜数据...</div>' +
+        '</div>';
+    }
 
-document.getElementById('refreshBtn').onclick = loadAll;
-renderTabs();
-loadAll();
-setInterval(function() {
-  if (!document.getElementById('readerPage').classList.contains('open')) loadAll();
-}, 5*60*1000);
-</script>
+    function renderList() {
+      var listEl = document.getElementById('list');
+      var items = dataCache[currentPlatform];
+
+      if (!items || items.length === 0) {
+        listEl.innerHTML =
+          '<div class="error-msg">' +
+            '<div class="icon">📭</div>' +
+            '<div>暂无数据</div>' +
+            '<div style="margin-top: 8px; font-size: 12px; opacity: 0.5;">试试下拉刷新</div>' +
+          '</div>';
+        return;
+      }
+
+      var html = '';
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var rank = i + 1;
+        var rankCls = rank === 1 ? 'rank top1' : rank === 2 ? 'rank top2' : rank === 3 ? 'rank top3' : 'rank other';
+
+        // 来源显示
+        var sourceDisplay = item.source || getPlatformName(currentPlatform);
+
+        // 前三名显示火焰图标
+        var hotIconHtml = rank <= 3
+          ? '<svg class="hot-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2C10.5 6 7 8 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-4-3.5-6-5-10z" fill="#ff6b6b"/></svg>'
+          : '';
+
+        // 清洗标题
+        var cleanTitle = cleanText(item.title);
+
+        html += '<div class="item" data-url="' + escHtml(item.url) + '" data-rank="' + rank + '">' +
+          '<div class="' + rankCls + '">' + rank + '</div>' +
+          '<div class="content">' +
+            '<div class="title">' + escHtml(cleanTitle) + '</div>' +
+            '<div class="meta">' +
+              '<span class="source-tag">' + escHtml(sourceDisplay) + '</span>' +
+              (item.hot ? '<span class="hot-value">' + escHtml(cleanText(item.hot)) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          hotIconHtml +
+        '</div>';
+      }
+      listEl.innerHTML = html;
+
+      // 绑定点击事件：打开摘要
+      var itemEls = listEl.querySelectorAll('.item');
+      for (var k = 0; k < itemEls.length; k++) {
+        itemEls[k].addEventListener('click', function() {
+          var url = this.getAttribute('data-url');
+          var rank = parseInt(this.getAttribute('data-rank')) || 0;
+          if (url) {
+            openSummary(url, rank);
+          }
+        });
+      }
+    }
+
+    function getPlatformName(id) {
+      for (var i = 0; i < PLATFORMS.length; i++) {
+        if (PLATFORMS[i].id === id) return PLATFORMS[i].name;
+      }
+      return id;
+    }
+
+    /* ============================================
+       调用 API 获取热搜数据
+       ============================================ */
+    async function loadAPI(platform) {
+      try {
+        var url = API_BASE + '/api/' + platform;
+        var resp = await fetch(url);
+        var json = await resp.json();
+
+        if (json.code === 1 && json.items && Array.isArray(json.items)) {
+          // 清洗每条数据的标题
+          return json.items.map(function(item) {
+            return {
+              title: cleanText(item.title),
+              url: item.url || '',
+              hot: cleanText(item.hot) || '',
+              source: item.source || platform
+            };
+          });
+        }
+        return [];
+      } catch (e) {
+        console.warn('[' + platform + '] 加载失败:', e);
+        return [];
+      }
+    }
+
+    // 一次性加载所有平台的数据
+    async function loadAll() {
+      showLoading();
+
+      // 依次加载每个平台的数据
+      for (var i = 0; i < PLATFORMS.length; i++) {
+        var p = PLATFORMS[i];
+        dataCache[p.id] = await loadAPI(p.id);
+      }
+
+      // 渲染当前平台的列表
+      renderList();
+    }
+
+    /* ============================================
+       摘要模态框功能
+       ============================================ */
+
+    // 打开摘要模态框
+    function openSummary(url, rank) {
+      currentSummaryUrl = url;
+      currentItemRank = rank;
+
+      // 获取当前平台名称
+      var platformName = getPlatformName(currentPlatform);
+
+      // 显示模态框
+      var overlay = document.getElementById('modalOverlay');
+      overlay.classList.add('show');
+
+      // 显示关闭按钮
+      document.getElementById('modalCloseBtn').classList.remove('hide');
+
+      // 显示加载状态
+      document.getElementById('modalLoading').classList.remove('hide');
+      document.getElementById('modalError').classList.add('hide');
+      document.getElementById('modalSummarySection').classList.add('hide');
+      document.getElementById('modalKeywordsSection').classList.add('hide');
+      document.getElementById('modalActions').classList.add('hide');
+      document.getElementById('modalSourceUrl').classList.add('hide');
+
+      // 设置平台和排名
+      document.getElementById('modalPlatform').textContent = platformName;
+      document.getElementById('modalRank').textContent = '第' + rank + '名';
+      document.getElementById('modalTitle').textContent = '加载中...';
+      document.getElementById('modalDesc').textContent = '';
+
+      // 获取摘要
+      loadSummary(url);
+    }
+
+    // 调用 API 获取摘要
+    async function loadSummary(url) {
+      document.getElementById('modalLoading').classList.remove('hide');
+      document.getElementById('modalError').classList.add('hide');
+
+      try {
+        var apiUrl = API_BASE + '/summary?url=' + encodeURIComponent(url);
+        var resp = await fetch(apiUrl);
+        var json = await resp.json();
+
+        if (json.code === 1) {
+          showSummaryResult(json);
+        } else {
+          showSummaryError();
+        }
+      } catch (e) {
+        console.warn('摘要加载失败:', e);
+        showSummaryError();
+      }
+    }
+
+    // 重试摘要加载
+    function retrySummary() {
+      if (currentSummaryUrl) {
+        loadSummary(currentSummaryUrl);
+      }
+    }
+
+    // 显示摘要结果
+    function showSummaryResult(data) {
+      document.getElementById('modalLoading').classList.add('hide');
+      document.getElementById('modalError').classList.add('hide');
+
+      // 显示标题和描述
+      var title = data.title || '无标题';
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalDesc').textContent = data.desc || '';
+
+      // 显示关键信息列表
+      var summarySection = document.getElementById('modalSummarySection');
+      var summaryList = document.getElementById('modalSummaryList');
+      if (data.summary && data.summary.length > 0) {
+        var html = '';
+        for (var i = 0; i < data.summary.length; i++) {
+          html += '<li>' + escHtml(data.summary[i]) + '</li>';
+        }
+        summaryList.innerHTML = html;
+        summarySection.classList.remove('hide');
+      } else {
+        summarySection.classList.add('hide');
+      }
+
+      // 显示关键词标签
+      var keywordsSection = document.getElementById('modalKeywordsSection');
+      var keywordsEl = document.getElementById('modalKeywords');
+      if (data.keywords && data.keywords.length > 0) {
+        var html = '';
+        for (var j = 0; j < data.keywords.length; j++) {
+          html += '<span class="keyword-tag"># ' + escHtml(data.keywords[j]) + '</span>';
+        }
+        keywordsEl.innerHTML = html;
+        keywordsSection.classList.remove('hide');
+      } else {
+        keywordsSection.classList.add('hide');
+      }
+
+      // 显示操作按钮
+      document.getElementById('modalActions').classList.remove('hide');
+
+      // 显示原始链接
+      var sourceUrlEl = document.getElementById('modalSourceUrl');
+      sourceUrlEl.textContent = currentSummaryUrl;
+      sourceUrlEl.classList.remove('hide');
+    }
+
+    // 显示错误状态
+    function showSummaryError() {
+      document.getElementById('modalLoading').classList.add('hide');
+      document.getElementById('modalError').classList.remove('hide');
+    }
+
+    // 关闭模态框
+    function closeModal() {
+      var overlay = document.getElementById('modalOverlay');
+      overlay.classList.remove('show');
+
+      // 隐藏关闭按钮
+      document.getElementById('modalCloseBtn').classList.add('hide');
+    }
+
+    // 处理遮罩层点击（点击遮罩关闭）
+    function handleModalOverlayClick(event) {
+      if (event.target === event.currentTarget) {
+        closeModal();
+      }
+    }
+
+    // 在浏览器中打开原文
+    function openInBrowser() {
+      if (currentSummaryUrl) {
+        window.open(currentSummaryUrl, '_blank');
+      }
+    }
+
+    /* ============================================
+       工具函数
+       ============================================ */
+    function escHtml(s) {
+      if (!s) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* ============================================
+       清洗API返回的脏数据
+       ============================================ */
+    function cleanText(text) {
+      if (!text) return '';
+      return text
+        // 移除HTML标签
+        .replace(/<[^>]+>/g, '')
+        // 移除换行符和多余空白
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        // 移除开头的排名数字（如 "1\n                    "）
+        .replace(/^\d+\s*/, '')
+        // 清洗首尾空白
+        .trim();
+    }
+
+    /* ============================================
+       滚动监听：显示/隐藏返回顶部按钮
+       ============================================ */
+    window.addEventListener('scroll', function() {
+      var fab = document.getElementById('fab');
+      if (window.scrollY > 300) {
+        fab.classList.add('show');
+      } else {
+        fab.classList.remove('show');
+      }
+    });
+
+    /* ============================================
+       启动
+       ============================================ */
+    renderTabs();
+    loadAll();
+
+    // 注册 Service Worker（PWA离线支持）
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function() {});
+    }
+
+    /* ============================================
+       自动刷新：当用户从后台切回App时获取最新数据
+       ============================================ */
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        // 页面从后台切回来时，自动刷新数据
+        loadAll();
+      }
+    });
+  </script>
 </body>
 </html>

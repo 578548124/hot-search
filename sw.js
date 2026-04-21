@@ -1,34 +1,99 @@
-// Service Worker v5 - 不缓存主页面，每次从网络获取最新
-const CACHE = 'hot-search-v5';
+/**
+ * Service Worker - 热搜聚合App
+ *
+ * 缓存策略：
+ * - 静态资源（HTML/CSS/JS/Manifest）: Cache First，版本 v2
+ * - API 请求（来自 hotsearch-worker）: Network First，失败时返回空数组
+ */
 
-self.addEventListener('install', e => {
-  self.skipWaiting();
-});
+const CACHE_VERSION = 'hot-search-v2';
+const STATIC_ASSETS = [
+  '/',
+  '/index_new.html',
+  '/manifest.json',
+];
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => caches.delete(k)))
-    )
+// ============================================
+// 安装：缓存静态资源
+// ============================================
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_VERSION).then(cache => {
+      return cache.addAll(STATIC_ASSETS);
+    }).then(() => {
+      // 立即启用新版本
+      return self.skipWaiting();
+    })
   );
-  self.clients.claim();
 });
 
-// 外部 API（含 CORS 代理）一律不拦截
-// 主 HTML 也不缓存，强制网络优先
-self.addEventListener('fetch', e => {
-  const url = e.request.url;
-  // 不拦截任何外部请求，让浏览器直连
-  if (url.includes('api.allorigins') ||
-      url.includes('tophub.today') ||
-      url.includes('zj.v.api.aa1.cn')) {
+// ============================================
+// 激活：清理旧版本缓存
+// ============================================
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames
+          .filter(name => name !== CACHE_VERSION)
+          .map(name => caches.delete(name))
+      );
+    }).then(() => {
+      // 立即接管所有页面
+      return self.clients.claim();
+    })
+  );
+});
+
+// ============================================
+// 请求拦截：根据类型选择缓存策略
+// ============================================
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // API 请求：Network First，失败时返回空数组
+  if (url.hostname === 'hotsearch-worker.haiyun954123.workers.dev') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // 克隆响应并缓存
+          const clone = response.clone();
+          caches.open(CACHE_VERSION).then(cache => {
+            cache.put(event.request, clone);
+          });
+          return response;
+        })
+        .catch(() => {
+          // 网络失败时返回空数组（API fallback）
+          return new Response('[]', {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        })
+    );
     return;
   }
-  // 静态资源可缓存
-  if (url.match(/\.(css|js|json|woff2?|png|jpg|ico)$/) && url.includes(self.location.origin)) {
-    e.respondWith(
-      caches.match(e.request).then(c => c || fetch(e.request))
-    );
-  }
-  // HTML 页面不缓存，直接取网络
+
+  // 静态资源：Cache First
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+
+      return fetch(event.request).then(response => {
+        // 缓存新的静态资源
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_VERSION).then(cache => {
+            cache.put(event.request, clone);
+          });
+        }
+        return response;
+      }).catch(() => {
+        // 如果是导航请求，返回缓存的首页
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index_new.html');
+        }
+        return new Response('Offline', { status: 503 });
+      });
+    })
+  );
 });
