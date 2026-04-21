@@ -25,6 +25,7 @@ const TOPHUB_URLS = {
   thepaper: 'https://tophub.today/n/wWmoO5Rd4E',
   ithome:   'https://tophub.today/n/K9dAp%E6%98%8E%E6%9C%88',
   huxiu:    'https://tophub.today/n/NR2Gp9dO0v',
+  douyin:   'https://tophub.today/n/K7GdaMgdQy',
   all:      'https://tophub.today/c/news',
 };
 
@@ -60,7 +61,8 @@ function parseTopHubHTML(html, platform) {
     // 来源白名单
     const domains = ['zhihu', 'weibo', 'baidu', 'thepaper', 'ithome',
       'mp.weixin', 'huxiu', 'sina', 'sohu', 'ifeng', 'b23.tv', 'douban',
-      '36kr', 'jiemian', 'caixin', 'yicai', ' keencha', 'zhidx', 'ithome'];
+      '36kr', 'jiemian', 'caixin', 'yicai', 'keencha', 'zhidx', 'ithome',
+      'douyin', 'v.douyin'];
     if (!domains.some(d => href.includes(d))) continue;
 
     // 去重
@@ -82,6 +84,7 @@ function parseTopHubHTML(html, platform) {
     else if (href.includes('b23.tv') || href.includes('bilibili')) source = 'B站';
     else if (href.includes('douban')) source = '豆瓣';
     else if (href.includes('36kr')) source = '36氪';
+    else if (href.includes('douyin') || href.includes('v.douyin')) source = '抖音';
 
     items.push({
       title: text.length > 120 ? text.substring(0, 120) : text,
