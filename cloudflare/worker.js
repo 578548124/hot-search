@@ -91,7 +91,7 @@ function parseTopHubHTML(html, platform) {
     });
   }
 
-  return items.slice(0, 50);
+  return items.slice(0, 100);
 }
 
 // ============================================================
